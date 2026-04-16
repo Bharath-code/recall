@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { join } from 'node:path';
 import { normalize, shouldSkipCommand } from '../import/normalizer.ts';
 import { insertCommand, updateCommand } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
@@ -67,6 +68,9 @@ export async function handleHookCapture(args: Record<string, string | undefined>
       duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : null,
     });
 
+    // Spawn background embedding generator — fire-and-forget, zero shell latency
+    spawnEmbedder();
+
     // Output the command ID for the shell hook to use in update
     process.stdout.write(String(id));
   } catch {
@@ -105,5 +109,37 @@ export function handleHookSnippet(shell: string): void {
     default:
       console.error(`Unsupported shell: ${shell}. Supported: zsh, bash`);
       process.exit(1);
+  }
+}
+
+// ─── Background embedding ─────────────────────────────────────────────────────
+
+let embedderPath: string | null = null;
+
+function spawnEmbedder(): void {
+  try {
+    if (!embedderPath) {
+      // In dev mode (src/index.ts), use bun run; in prod use binary path
+      embedderPath = import.meta.filename.includes('src/index.ts')
+        ? join(process.cwd(), 'src', 'index.ts')
+        : process.argv[0];
+    }
+
+    const entry = embedderPath;
+    const batchSize = '50';
+
+    const proc = Bun.spawn(
+      ['bun', entry, 'embed', '--batch-size', batchSize],
+      {
+        stdout: 'ignore',
+        stderr: 'ignore',
+        detached: true,
+        spawnOptions: { cwd: process.cwd() },
+      },
+    );
+
+    proc.unref();
+  } catch {
+    // Embedding is best-effort — never fail the hook
   }
 }

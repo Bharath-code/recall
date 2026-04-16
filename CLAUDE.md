@@ -8,6 +8,9 @@ Recall is a local-first developer workflow memory assistant built with Bun + Typ
 
 Core promise: "Your terminal remembers what you forget."
 
+## Project Status
+Recall is currently **pre-alpha**: this repo is the product + UX spec, architecture, and implementation plan (code is still evolving).
+
 ## Tech Stack
 
 - **Runtime**: Bun
@@ -107,9 +110,12 @@ User Terminal → Shell Hook Layer → Recall Core Engine → Local SQLite
 
 ### Build & Run
 ```bash
+bun install
 bun run build     # compile CLI
 bun run dev       # development mode
 bun test          # run tests
+bun run lint     # typecheck (tsc --noEmit)
+bun run clean    # remove build output + node_modules
 ```
 
 ### CLI Commands (all implemented)

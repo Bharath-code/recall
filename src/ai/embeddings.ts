@@ -4,7 +4,12 @@
  * Vector math and semantic search helpers used by `recall ask`.
  */
 
+import { getDb } from '../db/index.ts';
 
+// ─── Pure math utilities ────────────────────────────────────────────────────
+
+export const VECTOR_DIM = 384;
+export const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
 
 /**
  * Cosine similarity between two vectors.
@@ -53,5 +58,64 @@ export function deserializeVector(buf: Buffer): number[] {
   return Array.from(arr);
 }
 
-export const VECTOR_DIM = 384;
-export const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
+// ─── Database-backed utilities ─────────────────────────────────────────────
+
+/**
+ * Insert an embedding for a command.
+ */
+export function insertEmbedding(commandId: number, vector: number[]): void {
+  const db = getDb();
+  const blob = serializeVector(vector);
+
+  db.prepare(`
+    INSERT OR REPLACE INTO embeddings (command_id, vector, model)
+    VALUES (?, ?, ?)
+  `).run(commandId, blob, MODEL_NAME);
+}
+
+/**
+ * Get command IDs that don't have embeddings yet.
+ */
+export function getUnembeddedCommandIds(limit: number = 100): number[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT c.id FROM commands c
+    LEFT JOIN embeddings e ON c.id = e.command_id
+    WHERE e.id IS NULL
+    ORDER BY c.created_at DESC
+    LIMIT ?
+  `).all(limit) as { id: number }[];
+
+  return rows.map(r => r.id);
+}
+
+/**
+ * Batch-generate embeddings for un-embedded commands.
+ * Returns the number of embeddings generated.
+ */
+export async function generateMissingEmbeddings(
+  embedder: { embed(text: string): Promise<number[]> },
+  batchSize: number = 200,
+): Promise<number> {
+  const db = getDb();
+  const ids = getUnembeddedCommandIds(batchSize);
+  if (ids.length === 0) return 0;
+
+  const placeholders = ids.map(() => '?').join(',');
+  const commands = db.prepare(`
+    SELECT id, normalized_command FROM commands
+    WHERE id IN (${placeholders})
+  `).all(...ids) as { id: number; normalized_command: string }[];
+
+  let generated = 0;
+  for (const cmd of commands) {
+    try {
+      const vector = await embedder.embed(cmd.normalized_command);
+      insertEmbedding(cmd.id, vector);
+      generated++;
+    } catch {
+      // Skip failures, retry next batch cycle
+    }
+  }
+  return generated;
+}

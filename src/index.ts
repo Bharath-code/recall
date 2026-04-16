@@ -120,6 +120,16 @@ cli
     await handleUninstall(flags);
   });
 
+// ─── recall embed (internal) ─────────────────────────
+cli
+  .command('embed', 'Internal: generate missing embeddings in background')
+  .option('--batch-size <n>', 'Commands per batch', { default: 200 })
+  .option('--daemon', 'Keep running and generate embeddings periodically')
+  .action(async (flags) => {
+    const { handleEmbed } = await import('./cli/embed.ts');
+    await handleEmbed(flags);
+  });
+
 // ─── recall hook (internal) ──────────────────────────
 cli
   .command('hook capture', 'Internal: capture a command from shell hook')
