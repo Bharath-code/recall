@@ -17,7 +17,9 @@ async function getModel(): Promise<any> {
   if (loadPromise) return loadPromise;
 
   loadPromise = (async () => {
-    const { pipeline } = await import('@xenova/transformers');
+    const mod = '@xenova/transformers';
+    // @ts-ignore
+    const { pipeline } = await import(mod);
     pipelineInstance = await pipeline('feature-extraction', MODEL_NAME, { quantized: true });
     return pipelineInstance;
   })();

@@ -263,8 +263,9 @@ export async function createEmbedder(config?: AIConfig): Promise<RecallEmbedder>
       case 'azure': {
         let azureMod: any = null;
         try {
-          // @ts-ignore — optional: bun add @ai-sdk/azure
-          azureMod = await import('@ai-sdk/azure');
+          const mod = '@ai-sdk/azure';
+          // @ts-ignore — optional peer dependency
+          azureMod = await import(mod);
         } catch {
           throw new Error('Run: bun add @ai-sdk/azure');
         }
@@ -274,7 +275,7 @@ export async function createEmbedder(config?: AIConfig): Promise<RecallEmbedder>
 
       // ── Local ONNX (in-process, no server) ───────────────────────────────
       case 'local': {
-        const { LocalEmbedder } = await import('./local-embedder.ts');
+        const { LocalEmbedder } = await import('./local-embedder');
         return new LocalEmbedder();
       }
 
