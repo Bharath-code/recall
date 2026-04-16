@@ -142,6 +142,7 @@ bun test          # run tests
 ## Reference Documents
 
 - **Full Plan**: `IMPLEMENTATION_PLAN.md` — task breakdown, wireframes, research
+- **Spec**: `SPEC.md` — implementation specification (source of truth)
 - **Brand Guide**: `BRANDING.md` — logo, colors, typography, voice, copy examples
 - **Marketing Plan**: `MARKETING_PLAN.md` — content strategy, launch plan, metrics
 - **Audience Building**: `AUDIENCE_BUILDING_PLAN.md` — pre-launch Twitter strategy

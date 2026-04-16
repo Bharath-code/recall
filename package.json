@@ -1,0 +1,46 @@
+{
+  "name": "recall-cli",
+  "version": "0.1.0",
+  "description": "Your terminal remembers what you forget.",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "recall": "src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile bin/recall",
+    "test": "bun test",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf bin/ node_modules/"
+  },
+  "dependencies": {
+    "cac": "^6.7.14",
+    "picocolors": "^1.1.1",
+    "ora": "^8.1.1",
+    "zod": "^3.24.2",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.5",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "license": "MIT",
+  "author": "Bharath",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bharath/recall-cli"
+  },
+  "keywords": [
+    "cli",
+    "terminal",
+    "history",
+    "memory",
+    "developer-tools",
+    "shell",
+    "productivity"
+  ]
+}

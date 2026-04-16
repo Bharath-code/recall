@@ -1,2 +1,39 @@
-.remember
-.log
+# Dependencies
+node_modules/
+
+# Build output
+bin/
+dist/
+
+# Recall data
+.recall/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Bun
+bun.lockb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# AI models (downloaded on demand)
+models/
