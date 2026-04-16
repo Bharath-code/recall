@@ -15,11 +15,16 @@
     "clean": "rm -rf bin/ node_modules/"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.69",
+    "@ai-sdk/cohere": "^3.0.30",
+    "@ai-sdk/google": "^3.0.63",
+    "@ai-sdk/openai": "^3.0.53",
+    "ai": "^6.0.164",
     "cac": "^6.7.14",
-    "picocolors": "^1.1.1",
     "ora": "^8.1.1",
-    "zod": "^3.24.2",
-    "pino": "^9.6.0"
+    "picocolors": "^1.1.1",
+    "pino": "^9.6.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bun": "^1.2.5",

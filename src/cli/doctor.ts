@@ -74,7 +74,7 @@ export async function handleDoctor(): Promise<void> {
   console.log('');
   const aiConfig = resolveAIConfig();
   console.log(colors.dim(`  AI provider: ${aiConfig.provider}`));
-  if (aiConfig.provider === 'openai' || aiConfig.provider === 'anthropic') {
+  if (aiConfig.provider === 'openai' || aiConfig.provider === 'openrouter') {
     console.log(colors.dim(`  API key: ${aiConfig.apiKey ? '••••' + aiConfig.apiKey.slice(-4) : 'not set'}`));
   }
 
