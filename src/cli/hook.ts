@@ -13,6 +13,7 @@ import { upsertRepo } from '../db/repos.ts';
 import { getRepoContext } from '../repos/detector.ts';
 import { generateZshSnippet } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet } from '../hooks/bash-snippet.ts';
+import { redactSecretsFromCommand } from '../config/index.ts';
 
 const CaptureSchema = z.object({
   rawCommand: z.string().min(1),
@@ -58,8 +59,8 @@ export async function handleHookCapture(args: Record<string, string | undefined>
     }
 
     const id = insertCommand({
-      raw_command: parsed.rawCommand,
-      normalized_command: normalized,
+      raw_command: redactSecretsFromCommand(parsed.rawCommand),
+      normalized_command: redactSecretsFromCommand(normalized),
       cwd: parsed.cwd,
       repo_path_hash: repoCtx?.hash ?? null,
       shell: parsed.shell,

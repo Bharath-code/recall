@@ -6,6 +6,11 @@ export function generateBashSnippet(): string {
   return `
 # ─── Recall Shell Hook ───────────────────────────────────
 # Captures commands for recall. Remove this block to uninstall.
+
+# Generate a unique session ID: nanoseconds since epoch + PID
+# Using BASHPID ensures we get the actual shell PID, not a subshell
+_recall_session_id="\$(printf '%s-%s' "\$(date +%s%N)" "\$\$")"
+
 _recall_prompt_command() {
   local exit_code=\$?
   local cmd=\$(HISTTIMEFORMAT= history 1 | sed 's/^[ ]*[0-9]*[ ]*//')
@@ -17,7 +22,7 @@ _recall_prompt_command() {
       --cwd "\$(pwd)" \\
       --shell bash \\
       --exit-code "\$exit_code" \\
-      --session-id "\$\$" 2>/dev/null &
+      --session-id "\$_RECALL_SESSION_ID" 2>/dev/null &
     disown 2>/dev/null
   fi
 }

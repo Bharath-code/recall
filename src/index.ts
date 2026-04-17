@@ -110,6 +110,19 @@ cli
     await handleDoctor();
   });
 
+// ─── recall config ───────────────────────────────────
+cli
+  .command('config', 'View and update Recall settings')
+  .option('--get <key>', 'Get a specific config value')
+  .option('--set <key=value>', 'Set a config value')
+  .option('--list', 'List all config values')
+  .option('--reset', 'Reset config to defaults')
+  .action(async (flags) => {
+    if (flags.noIcons) setIconsEnabled(false);
+    const { handleConfig } = await import('./cli/config.ts');
+    handleConfig(flags);
+  });
+
 // ─── recall uninstall ────────────────────────────────
 cli
   .command('uninstall', 'Remove Recall from your system')
