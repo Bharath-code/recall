@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun build src/index.ts --compile --outfile bin/recall",
+    "build": "bun build src/index.ts --compile --outfile bin/recall && ./scripts/sign-macos.sh bin/recall",
     "test": "bun test",
     "lint": "tsc --noEmit",
     "clean": "rm -rf bin/ node_modules/"

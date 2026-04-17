@@ -12,6 +12,7 @@ export interface Command {
   shell: string;
   stderr_output: string | null;
   session_id: string | null;
+  source: 'hook' | 'import';
   created_at: string;
 }
 
@@ -25,6 +26,7 @@ export interface InsertCommandInput {
   shell: string;
   stderr_output?: string | null;
   session_id?: string | null;
+  source?: 'hook' | 'import';
 }
 
 export interface SearchOptions {
@@ -34,6 +36,7 @@ export interface SearchOptions {
   offset?: number;
   since?: string;
   failedOnly?: boolean;
+  includeImported?: boolean;
 }
 
 function db(): Database {
@@ -42,8 +45,8 @@ function db(): Database {
 
 export function insertCommand(input: InsertCommandInput): number {
   const stmt = db().prepare(`
-    INSERT INTO commands (raw_command, normalized_command, cwd, repo_path_hash, exit_code, duration_ms, shell, stderr_output, session_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO commands (raw_command, normalized_command, cwd, repo_path_hash, exit_code, duration_ms, shell, stderr_output, session_id, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -56,6 +59,7 @@ export function insertCommand(input: InsertCommandInput): number {
     input.shell,
     input.stderr_output ?? null,
     input.session_id ?? null,
+    input.source ?? 'hook',
   );
 
   return Number(result.lastInsertRowid);
@@ -88,7 +92,7 @@ export function updateCommand(
 }
 
 export function searchCommands(opts: SearchOptions): Command[] {
-  const { query, repo_path_hash, limit = 20, offset = 0, since, failedOnly } = opts;
+  const { query, repo_path_hash, limit = 20, offset = 0, since, failedOnly, includeImported } = opts;
 
   // Use FTS5 for fast full-text search
   let sql = `
@@ -97,6 +101,10 @@ export function searchCommands(opts: SearchOptions): Command[] {
     WHERE commands_fts MATCH ?
   `;
   const params: (string | number)[] = [query];
+
+  if (!includeImported) {
+    sql += " AND c.source = 'hook'";
+  }
 
   if (repo_path_hash) {
     sql += ' AND c.repo_path_hash = ?';
@@ -121,22 +129,34 @@ export function searchCommandsKeyword(query: string, limit: number = 20): Comman
   const pattern = `%${query}%`;
   return db().prepare(`
     SELECT * FROM commands
-    WHERE normalized_command LIKE ? OR raw_command LIKE ? OR cwd LIKE ?
+    WHERE source = 'hook' AND (normalized_command LIKE ? OR raw_command LIKE ? OR cwd LIKE ?)
     ORDER BY created_at DESC
     LIMIT ?
   `).all(pattern, pattern, pattern, limit) as Command[];
 }
 
+export function deleteCommandById(id: number): boolean {
+  const result = db().prepare('DELETE FROM commands WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function deleteAllCommands(): number {
+  const result = db().prepare('DELETE FROM commands').run();
+  return result.changes;
+}
+
 export function getRecentCommands(opts: {
   limit?: number;
   repo_path_hash?: string;
+  includeImported?: boolean;
 } = {}): Command[] {
-  const { limit = 20, repo_path_hash } = opts;
+  const { limit = 20, repo_path_hash, includeImported } = opts;
+  const sourceFilter = includeImported ? '' : "AND source = 'hook'";
 
   if (repo_path_hash) {
     return db().prepare(`
       SELECT * FROM commands
-      WHERE repo_path_hash = ?
+      WHERE repo_path_hash = ? ${sourceFilter}
       ORDER BY created_at DESC
       LIMIT ?
     `).all(repo_path_hash, limit) as Command[];
@@ -144,9 +164,20 @@ export function getRecentCommands(opts: {
 
   return db().prepare(`
     SELECT * FROM commands
+    WHERE 1 = 1 ${sourceFilter}
     ORDER BY created_at DESC
     LIMIT ?
   `).all(limit) as Command[];
+}
+
+export function getRecentNormalizedCommands(limit: number = 100): string[] {
+  const rows = db().prepare(`
+    SELECT normalized_command FROM commands
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(limit) as { normalized_command: string }[];
+
+  return rows.map(row => row.normalized_command);
 }
 
 export function getCommandById(id: number): Command | null {

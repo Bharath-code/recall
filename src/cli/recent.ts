@@ -8,6 +8,7 @@ import { colors, formatCommandLine, formatHeader, getIcons } from '../ui/index.t
 export interface RecentFlags {
   limit?: number;
   repo?: string;
+  all?: boolean;
 }
 
 export function handleRecent(flags: RecentFlags): void {
@@ -17,14 +18,16 @@ export function handleRecent(flags: RecentFlags): void {
   const commands = getRecentCommands({
     limit,
     repo_path_hash: flags.repo,
+    includeImported: flags.all,
   });
 
   if (commands.length === 0) {
     console.log(formatHeader(`${icons.recent} recall recent`));
     console.log('');
-    console.log(colors.dim('  No commands yet.'));
+    console.log(colors.dim(flags.all ? '  No commands yet.' : '  No live captured commands yet.'));
     console.log('');
     console.log(colors.dim('  Commands you run after setup will appear here.'));
+    console.log(colors.dim('  Use \'recall recent --all\' to include imported shell history.'));
     console.log(colors.dim('  Run \'recall init\' if you haven\'t set up yet.'));
     return;
   }

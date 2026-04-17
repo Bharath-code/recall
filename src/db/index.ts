@@ -1,10 +1,11 @@
 import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
+import embeddedSchemaPath from './schema.sql' with { type: 'file' };
 
 const RECALL_DIR = join(process.env.HOME ?? '~', '.recall');
 const DB_PATH = join(RECALL_DIR, 'recall.db');
-const SCHEMA_PATH = join(dirname(import.meta.dir), 'db', 'schema.sql');
+const SCHEMA_PATH = embeddedSchemaPath;
 
 let _db: Database | null = null;
 
@@ -41,12 +42,28 @@ function runMigrations(db: Database): void {
       } catch (err) {
         // Ignore "already exists" errors during migration
         const msg = err instanceof Error ? err.message : String(err);
-        if (!msg.includes('already exists')) {
+        const canDeferSourceIndex =
+          trimmed.includes('idx_commands_source') && msg.includes('no such column: source');
+        if (!msg.includes('already exists') && !canDeferSourceIndex) {
           throw err;
         }
       }
     }
   }
+
+  applyCompatibilityMigrations(db);
+}
+
+function applyCompatibilityMigrations(db: Database): void {
+  const columns = db.prepare('PRAGMA table_info(commands)').all() as { name: string }[];
+  const hasSource = columns.some(column => column.name === 'source');
+
+  if (!hasSource) {
+    db.exec("ALTER TABLE commands ADD COLUMN source TEXT NOT NULL DEFAULT 'hook' CHECK(source IN ('hook', 'import'))");
+    db.exec("UPDATE commands SET source = 'import' WHERE session_id IS NULL AND exit_code IS NULL AND duration_ms IS NULL");
+  }
+
+  db.exec('CREATE INDEX IF NOT EXISTS idx_commands_source ON commands(source)');
 }
 
 function splitStatements(sql: string): string[] {
@@ -133,6 +150,7 @@ export function createTestDb(): Database {
         }
       }
     }
+    applyCompatibilityMigrations(db);
   }
 
   return db;

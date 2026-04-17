@@ -2,13 +2,14 @@
  * recall config — View and update Recall settings
  */
 
-import { loadConfig, updateConfig, saveConfig, type RecallConfig } from '../config/index.ts';
+import { loadConfig, updateConfig, resetConfig, type RecallConfig } from '../config/index.ts';
 import { colors, getIcons } from '../ui/index.ts';
-import { z } from 'zod';
 
 const CONFIG_KEYS: (keyof RecallConfig)[] = [
+  'capture_enabled',
   'capture_stderr',
   'redact_secrets',
+  'ignored_patterns',
   'embed_interval_ms',
   'auto_embed',
   'show_icons',
@@ -30,7 +31,7 @@ export function handleConfig(flags: ConfigFlags): void {
 
   // --reset
   if (flags.reset) {
-    const defaults = saveConfig({} as RecallConfig);
+    resetConfig();
     console.log(`  ${icons.check} ${colors.success('Config reset to defaults')}`);
     console.log('');
     listAllConfig(loadConfig());
@@ -120,6 +121,7 @@ function parseValue(
 ): { value: unknown; error?: string } {
   switch (key) {
     case 'capture_stderr':
+    case 'capture_enabled':
     case 'redact_secrets':
     case 'auto_embed':
     case 'show_icons':
@@ -143,6 +145,13 @@ function parseValue(
     case 'last_digest_at':
       return { value: raw || null };
 
+    case 'ignored_patterns':
+      return {
+        value: raw
+          ? raw.split(',').map(item => item.trim()).filter(Boolean)
+          : [],
+      };
+
     default:
       return { value: raw };
   }
@@ -157,10 +166,12 @@ function formatValue(value: unknown): string {
 
 function isDefaultValue(key: keyof RecallConfig, value: unknown): boolean {
   const defaults: Record<string, unknown> = {
+    capture_enabled: true,
     capture_stderr: false,
     redact_secrets: true,
+    ignored_patterns: [],
     embed_interval_ms: 300_000,
-    auto_embed: true,
+    auto_embed: false,
     show_icons: true,
     preferred_shell: 'auto',
     last_digest_at: null,
@@ -171,10 +182,12 @@ function isDefaultValue(key: keyof RecallConfig, value: unknown): boolean {
 
 function getDefaultString(key: keyof RecallConfig): string {
   const defaults: Record<string, string> = {
+    capture_enabled: 'true',
     capture_stderr: 'false',
     redact_secrets: 'true',
+    ignored_patterns: '[]',
     embed_interval_ms: '300000',
-    auto_embed: 'true',
+    auto_embed: 'false',
     show_icons: 'true',
     preferred_shell: 'auto',
     last_digest_at: 'null',

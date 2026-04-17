@@ -3,9 +3,9 @@
 
 **History is strings. Recall is context.**
 
-Recall is a **local-first** command & workflow memory for developers. It captures the commands you run (with context like repo + cwd), so you can **find the exact thing you did last time** and rebuild project context fast—without sending your history to the cloud.
+Recall is a **local-first** command memory for developers. It captures the commands you run (with context like repo + cwd), so you can **find the exact thing you did last time** and rebuild project context fast—without sending your history to the cloud.
 
-> Status: **pre-alpha** (code not shipped yet). This repo is the product + UX spec, architecture, and implementation plan.
+> Status: **dogfood MVP**. The zsh-first local capture/search loop is implemented for early Mac developer testing. Later features are gated behind `RECALL_EXPERIMENTAL=1`.
 
 ---
 
@@ -19,7 +19,7 @@ Terminal work is high-leverage… and strangely ephemeral:
 
 Recall is built to fix that with a simple promise:
 
-**capture → search → project memory → (later) workflow automation**
+**capture → search → project memory**
 
 ---
 
@@ -27,6 +27,7 @@ Recall is built to fix that with a simple promise:
 - **Repo-aware command recall**: search what you ran, *in this repo*, with timestamps and cwd context
 - **Project memory**: quickly rehydrate “how we run this project” (startup patterns, recent commands)
 - **Local-first by default**: your data stays on your machine (SQLite), no accounts, no telemetry
+- **Strict privacy controls**: pause capture, ignore sensitive command patterns, and delete captured data locally
 
 Planned later:
 - **Forgotten tools**: surface tools you installed but don’t use (brew/npm/cargo)
@@ -36,7 +37,7 @@ Planned later:
 ---
 
 ## 10-second demo (what you’ll be able to do)
-Once implemented, the core experience looks like this:
+The core dogfood experience:
 
 ```bash
 # Find the exact command you ran last time
@@ -49,18 +50,31 @@ recall recent
 recall project
 ```
 
-**GIF placeholder:** add a 10–20s terminal clip here showing `recall search` → copy → run.
+Experimental commands are hidden unless you set `RECALL_EXPERIMENTAL=1`.
 
 ---
 
-## Install (planned)
-Recall will ship as a single binary (Bun compile) with a Homebrew tap.
+## Install From Source
 
-Planned install targets:
-- macOS (Homebrew)
-- Linux (curl installer / package managers)
+Requirements:
+- macOS with zsh
+- Bun 1.2+
+- Git available in `PATH`
 
-Until the binary exists, this repo is the reference spec. If you want to help implement it, see “Contributing”.
+```bash
+bun install
+bun run build
+./bin/recall --help
+./bin/recall init
+```
+
+Default setup prints the shell hook line for manual install:
+
+```bash
+eval "$(recall hook zsh)"
+```
+
+Use `recall init --auto` only when you want Recall to append the hook to your shell rc file.
 
 ---
 
@@ -69,10 +83,15 @@ Shell history is personal. Recall is designed to earn trust first.
 
 - **Local-first storage**: commands live in a local SQLite DB (no cloud sync in early phases)
 - **No telemetry** by default (no tracking, no hidden network calls)
+- **AI disabled by default**: semantic search and embeddings are experimental and hidden unless `RECALL_EXPERIMENTAL=1`
 - **Hook install is two-mode**:
   - **Default: print-only** (Starship-style) — shows you the line to add to your shell rc
   - **Opt-in: `--auto`** — safe append-only install with idempotent detection (zinit pattern)
-- **CLI always works without AI**: AI is an optional layer planned for later phases
+- **Capture controls**:
+  - `recall config --set capture_enabled=false`
+  - `recall ignore add <pattern>`
+  - `recall delete --id <id>`
+  - `recall delete --all --yes`
 
 ---
 
@@ -130,9 +149,17 @@ Recall is intentionally phased to avoid feature bloat and earn trust.
 ## Contributing
 This project is early. Contributions that move the needle most:
 
-- Implement the Phase 1 MVP (shell capture → SQLite → search)
+- Harden the Phase 1 MVP (shell capture → SQLite → search)
 - Tighten the trust story (hook safety, secret redaction rules, uninstall/doctor UX)
 - Produce the first “10-second demo” clip once CLI exists
+
+Before opening a PR, run:
+
+```bash
+bun test
+bun run lint
+bun run build
+```
 
 Then open an issue with:
 - what you plan to build
@@ -145,4 +172,3 @@ Then open an issue with:
 Not chosen yet.
 
 If you’re serious about OSS growth + corporate adoption, a permissive license (MIT/Apache-2.0) usually reduces friction.
-

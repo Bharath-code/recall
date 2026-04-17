@@ -8,12 +8,15 @@
 
 **User:** Software developers, DevOps engineers, CLI power users (Unix/Linux background, 22-40yo)
 
+**Status:** Dogfood MVP for Mac developers using zsh. Later-phase commands are gated behind `RECALL_EXPERIMENTAL=1`.
+
 **Success (Phase 1 MVP):**
 - `recall search <term>` returns matching commands in <100ms
 - `recall recent` shows last 20 commands
 - Shell hook captures commands without breaking terminals
 - `recall init` completes onboarding in <2 minutes
 - All data stored locally (`~/.recall/recall.db`)
+- Privacy controls can pause capture, ignore sensitive patterns, and delete local data
 
 ---
 
@@ -62,10 +65,15 @@ recall init [--auto]            # Onboarding wizard
 recall search "<term>"          # Search commands
 recall recent [--limit 20]      # Recent commands
 recall project                  # Current repo context
-recall hook capture <payload>   # Internal: shell hook handler
+recall hook <action>            # Internal: capture/update/zsh/bash shell hook handler
+recall ignore add|remove|list   # Local capture blocklist patterns
+recall delete --id <id>         # Delete one captured command
+recall delete --all --yes       # Delete all captured commands
 recall uninstall [--keep-data] # Remove hooks
 recall doctor                   # Debug installation
 ```
+
+Experimental commands are registered only when `RECALL_EXPERIMENTAL=1`: `ask`, `fix`, `replay`, `forgotten-tools`, and `embed`.
 
 ### Shell Hook (internal)
 ```bash

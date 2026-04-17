@@ -9,7 +9,7 @@
  */
 
 import { resolveAIConfig, createEmbedder, NoopEmbedder } from '../ai/adapter.ts';
-import { generateMissingEmbeddings, getUnembeddedCommandIds } from '../ai/embeddings.ts';
+import { generateMissingEmbeddings } from '../ai/embeddings.ts';
 
 export interface EmbedFlags {
   batchSize?: number;

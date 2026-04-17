@@ -13,17 +13,23 @@ import { getRecallDir } from '../db/index.ts';
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const ConfigSchema = z.object({
+  // Privacy: allow shell hooks to capture commands (default: on, user can pause)
+  capture_enabled: z.boolean().default(true),
+
   // Privacy: capture stderr output from commands (default: off — security risk)
   capture_stderr: z.boolean().default(false),
 
   // Privacy: redact known secret patterns from commands before storage (default: on)
   redact_secrets: z.boolean().default(true),
 
+  // Privacy: plain substring patterns, with optional "*" wildcards, that skip capture
+  ignored_patterns: z.array(z.string()).default([]),
+
   // Privacy: minimum time between embedding generation batches (ms) (default: 5min)
   embed_interval_ms: z.number().default(300_000),
 
-  // AI: auto-generate embeddings on capture (default: true if embedder available)
-  auto_embed: z.boolean().default(true),
+  // AI: auto-generate embeddings on capture (default: off for strict local MVP)
+  auto_embed: z.boolean().default(false),
 
   // UI: show icons (default: true)
   show_icons: z.boolean().default(true),
@@ -75,6 +81,10 @@ export function loadConfig(): RecallConfig {
   return _config;
 }
 
+export function defaultConfig(): RecallConfig {
+  return ConfigSchema.parse({});
+}
+
 /**
  * Save config to ~/.recall/config.json.
  */
@@ -84,8 +94,15 @@ export function saveConfig(cfg: RecallConfig): void {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 
-  writeFileSync(getConfigPath(), JSON.stringify(cfg, null, 2), 'utf-8');
-  _config = cfg;
+  const parsed = ConfigSchema.parse(cfg);
+  writeFileSync(getConfigPath(), JSON.stringify(parsed, null, 2), 'utf-8');
+  _config = parsed;
+}
+
+export function resetConfig(): RecallConfig {
+  const defaults = defaultConfig();
+  saveConfig(defaults);
+  return defaults;
 }
 
 /**
@@ -110,6 +127,56 @@ export function updateConfig(updates: Partial<RecallConfig>): RecallConfig {
  */
 export function shouldRedactSecrets(): boolean {
   return getConfig('redact_secrets');
+}
+
+export function isCaptureEnabled(): boolean {
+  return getConfig('capture_enabled');
+}
+
+export function shouldAutoEmbed(): boolean {
+  return getConfig('auto_embed');
+}
+
+export function getIgnoredPatterns(): string[] {
+  return getConfig('ignored_patterns');
+}
+
+export function addIgnoredPattern(pattern: string): RecallConfig {
+  const trimmed = pattern.trim();
+  if (!trimmed) return loadConfig();
+
+  const current = loadConfig();
+  if (current.ignored_patterns.includes(trimmed)) return current;
+
+  return updateConfig({
+    ignored_patterns: [...current.ignored_patterns, trimmed],
+  });
+}
+
+export function removeIgnoredPattern(pattern: string): RecallConfig {
+  const current = loadConfig();
+  return updateConfig({
+    ignored_patterns: current.ignored_patterns.filter(p => p !== pattern),
+  });
+}
+
+export function commandMatchesIgnoredPattern(command: string): boolean {
+  return getIgnoredPatterns().some(pattern => patternMatchesCommand(pattern, command));
+}
+
+export function patternMatchesCommand(pattern: string, command: string): boolean {
+  const trimmed = pattern.trim();
+  if (!trimmed) return false;
+
+  if (!trimmed.includes('*')) {
+    return command.includes(trimmed);
+  }
+
+  const escaped = trimmed
+    .split('*')
+    .map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*');
+  return new RegExp(escaped).test(command);
 }
 
 // ─── Secret redaction patterns ────────────────────────────────────────────────

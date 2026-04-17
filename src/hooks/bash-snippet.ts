@@ -9,7 +9,7 @@ export function generateBashSnippet(): string {
 
 # Generate a unique session ID: nanoseconds since epoch + PID
 # Using BASHPID ensures we get the actual shell PID, not a subshell
-_recall_session_id="\$(printf '%s-%s' "\$(date +%s%N)" "\$\$")"
+_RECALL_SESSION_ID="\$(printf '%s-%s' "\$(date +%s%N)" "\$\$")"
 
 _recall_prompt_command() {
   local exit_code=\$?

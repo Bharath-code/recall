@@ -7,32 +7,60 @@
 
 import { z } from 'zod';
 import { join } from 'node:path';
-import { normalize, shouldSkipCommand } from '../import/normalizer.ts';
-import { insertCommand, updateCommand } from '../db/commands.ts';
+import { normalize, shouldSkipCommand, isDuplicate } from '../import/normalizer.ts';
+import { insertCommand, updateCommand, getRecentNormalizedCommands } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { getRepoContext } from '../repos/detector.ts';
 import { generateZshSnippet } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet } from '../hooks/bash-snippet.ts';
-import { redactSecretsFromCommand } from '../config/index.ts';
+import {
+  commandMatchesIgnoredPattern,
+  isCaptureEnabled,
+  redactSecretsFromCommand,
+  shouldAutoEmbed,
+} from '../config/index.ts';
 
 const CaptureSchema = z.object({
   rawCommand: z.string().min(1),
   cwd: z.string().min(1),
   shell: z.enum(['zsh', 'bash', 'unknown']).default('unknown'),
-  startTime: z.string().optional(),
+  startTime: z.coerce.string().optional(),
   sessionId: z.string().optional(),
-  exitCode: z.string().optional(),
-  durationMs: z.string().optional(),
+  exitCode: z.coerce.string().optional(),
+  durationMs: z.coerce.string().optional(),
 });
 
 const UpdateSchema = z.object({
-  commandId: z.string().min(1),
-  exitCode: z.string(),
-  durationMs: z.string().optional(),
+  commandId: z.coerce.string().min(1),
+  exitCode: z.coerce.string(),
+  durationMs: z.coerce.string().optional(),
 });
+
+export async function handleHookAction(
+  action: string,
+  args: Record<string, string | undefined>,
+): Promise<void> {
+  switch (action) {
+    case 'capture':
+      await handleHookCapture(args);
+      return;
+    case 'update':
+      await handleHookUpdate(args);
+      return;
+    case 'zsh':
+    case 'bash':
+      handleHookSnippet(action);
+      return;
+    default:
+      console.error(`Unsupported hook action: ${action}. Supported: capture, update, zsh, bash`);
+      process.exit(1);
+  }
+}
 
 export async function handleHookCapture(args: Record<string, string | undefined>): Promise<void> {
   try {
+    if (!isCaptureEnabled()) return;
+
     const parsed = CaptureSchema.parse({
       rawCommand: args['raw-command'] ?? args.rawCommand,
       cwd: args.cwd,
@@ -44,9 +72,11 @@ export async function handleHookCapture(args: Record<string, string | undefined>
     });
 
     if (shouldSkipCommand(parsed.rawCommand)) return;
+    if (commandMatchesIgnoredPattern(parsed.rawCommand)) return;
 
     const normalized = normalize(parsed.rawCommand);
     if (!normalized) return;
+    if (isDuplicate(normalized, getRecentNormalizedCommands(100))) return;
 
     // Detect git repo context
     const repoCtx = await getRepoContext(parsed.cwd);
@@ -69,8 +99,8 @@ export async function handleHookCapture(args: Record<string, string | undefined>
       duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : null,
     });
 
-    // Spawn background embedding generator — fire-and-forget, zero shell latency
-    spawnEmbedder();
+    // Spawn background embedding generator only when explicitly enabled.
+    if (shouldAutoEmbed()) spawnEmbedder();
 
     // Output the command ID for the shell hook to use in update
     process.stdout.write(String(id));
@@ -135,7 +165,7 @@ function spawnEmbedder(): void {
         stdout: 'ignore',
         stderr: 'ignore',
         detached: true,
-        spawnOptions: { cwd: process.cwd() },
+        cwd: process.cwd(),
       },
     );
 

@@ -13,9 +13,11 @@ CREATE TABLE IF NOT EXISTS commands (
   shell TEXT NOT NULL DEFAULT 'unknown',
   stderr_output TEXT,
   session_id TEXT,
+  source TEXT NOT NULL DEFAULT 'hook' CHECK(source IN ('hook', 'import')),
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+CREATE INDEX IF NOT EXISTS idx_commands_source ON commands(source);
 CREATE INDEX IF NOT EXISTS idx_commands_created_at ON commands(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_commands_repo ON commands(repo_path_hash);
 CREATE INDEX IF NOT EXISTS idx_commands_normalized ON commands(normalized_command);

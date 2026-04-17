@@ -90,8 +90,8 @@ export async function handleInit(flags: InitFlags): Promise<void> {
       if (existingCount === 0 && parsed.length > 0) {
         // Batch import with transaction
         const insertStmt = db.prepare(`
-          INSERT INTO commands (raw_command, normalized_command, cwd, shell, created_at)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO commands (raw_command, normalized_command, cwd, shell, created_at, source)
+          VALUES (?, ?, ?, ?, ?, 'import')
         `);
 
         const transaction = db.transaction(() => {
