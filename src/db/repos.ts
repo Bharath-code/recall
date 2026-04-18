@@ -62,3 +62,7 @@ export function updateStartupCommands(repoPathHash: string, commands: string[]):
     WHERE repo_path_hash = ?
   `).run(JSON.stringify(commands), repoPathHash);
 }
+
+export function getAllRepos(): Repo[] {
+  return db().prepare('SELECT * FROM repos ORDER BY last_opened_at DESC').all() as Repo[];
+}

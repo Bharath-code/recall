@@ -7,12 +7,18 @@
   "bin": {
     "recall": "src/index.ts"
   },
+  "workspaces": [
+    "landing"
+  ],
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --compile --outfile bin/recall && ./scripts/sign-macos.sh bin/recall",
     "test": "bun test",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf bin/ node_modules/"
+    "clean": "rm -rf bin/ node_modules/",
+    "landing:dev": "cd landing && bun run dev",
+    "landing:build": "cd landing && bun run build",
+    "landing:preview": "cd landing && bun run preview"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.69",

@@ -13,6 +13,7 @@ import { upsertRepo } from '../db/repos.ts';
 import { getRepoContext } from '../repos/detector.ts';
 import { generateZshSnippet } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet } from '../hooks/bash-snippet.ts';
+import { detectShell, getShellRcPath, appendHookToRc } from '../hooks/detect.ts';
 import {
   commandMatchesIgnoredPattern,
   isCaptureEnabled,
@@ -51,8 +52,14 @@ export async function handleHookAction(
     case 'bash':
       handleHookSnippet(action);
       return;
+    case 'bind-ctrl-r':
+      await handleBindCtrlR();
+      return;
+    case 'unbind-ctrl-r':
+      await handleUnbindCtrlR();
+      return;
     default:
-      console.error(`Unsupported hook action: ${action}. Supported: capture, update, zsh, bash`);
+      console.error(`Unsupported hook action: ${action}. Supported: capture, update, zsh, bash, bind-ctrl-r, unbind-ctrl-r`);
       process.exit(1);
   }
 }
@@ -141,6 +148,107 @@ export function handleHookSnippet(shell: string): void {
       console.error(`Unsupported shell: ${shell}. Supported: zsh, bash`);
       process.exit(1);
   }
+}
+
+export async function handleBindCtrlR(): Promise<void> {
+  const shell = detectShell();
+
+  if (shell === 'unknown') {
+    console.error('Could not detect shell. Supported: zsh, bash');
+    process.exit(1);
+  }
+
+  const rcPath = getShellRcPath(shell);
+  if (!rcPath) {
+    console.error(`Could not find ${shell} config file`);
+    process.exit(1);
+  }
+
+  const widgetSnippet = shell === 'zsh' ? generateZshCtrlRWidget() : generateBashCtrlRWidget();
+  const marker = '# RECALL_CTRL_R_WIDGET';
+
+  // Check if already installed
+  const content = await Bun.file(rcPath).text();
+  if (content.includes(marker)) {
+    console.log('Ctrl-R widget already installed');
+    return;
+  }
+
+  await appendHookToRc(rcPath, widgetSnippet);
+  console.log(`Ctrl-R widget installed to ${rcPath}`);
+  console.log('Run `source ' + rcPath + '` or restart your shell to apply');
+}
+
+export async function handleUnbindCtrlR(): Promise<void> {
+  const shell = detectShell();
+
+  if (shell === 'unknown') {
+    console.error('Could not detect shell. Supported: zsh, bash');
+    process.exit(1);
+  }
+
+  const rcPath = getShellRcPath(shell);
+  if (!rcPath) {
+    console.error(`Could not find ${shell} config file`);
+    process.exit(1);
+  }
+
+  const marker = '# RECALL_CTRL_R_WIDGET';
+  const content = await Bun.file(rcPath).text();
+  const lines = content.split('\n');
+
+  // Find and remove the widget section
+  const startIndex = lines.findIndex(line => line.includes(marker));
+  if (startIndex === -1) {
+    console.log('Ctrl-R widget not installed');
+    return;
+  }
+
+  const endIndex = lines.findIndex((line, idx) => idx > startIndex && line.includes('# END RECALL_CTRL_R_WIDGET'));
+  if (endIndex === -1) {
+    console.log('Could not find end marker for Ctrl-R widget');
+    return;
+  }
+
+  const newContent = lines.slice(0, startIndex).concat(lines.slice(endIndex + 1)).join('\n');
+  await Bun.write(rcPath, newContent);
+  console.log(`Ctrl-R widget removed from ${rcPath}`);
+  console.log('Run `source ' + rcPath + '` or restart your shell to apply');
+}
+
+function generateZshCtrlRWidget(): string {
+  return `
+# RECALL_CTRL_R_WIDGET
+# Recall interactive search widget for Ctrl-R
+_recall_ctrlr_widget() {
+  local selected=$(recall pick 2>/dev/null)
+  if [[ -n "$selected" ]]; then
+    LBUFFER="$selected"
+    zle reset-prompt
+  fi
+  zle -K kill-line
+}
+zle -N _recall_ctrlr_widget
+bindkey '^R' _recall_ctrlr_widget
+# END RECALL_CTRL_R_WIDGET
+`;
+}
+
+function generateBashCtrlRWidget(): string {
+  const lines = [
+    '# RECALL_CTRL_R_WIDGET',
+    '# Recall interactive search widget for Ctrl-R',
+    '_recall_ctrlr_widget() {',
+    '  local selected=$(recall pick 2>/dev/null)',
+    '  if [[ -n "$selected" ]]; then',
+    '    READLINE_LINE="$selected"',
+    '    READLINE_POINT=${#READLINE_LINE}',
+    '  fi',
+    '}',
+    'bind -x \'\"\\x12\": _recall_ctrlr_widget\'',
+    '# END RECALL_CTRL_R_WIDGET',
+  ];
+  return '\n' + lines.join('\n') + '\n';
 }
 
 // ─── Background embedding ─────────────────────────────────────────────────────

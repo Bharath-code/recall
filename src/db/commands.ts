@@ -219,3 +219,7 @@ export function getTopCommands(limit: number = 10): { normalized_command: string
     LIMIT ?
   `).all(limit) as { normalized_command: string; count: number }[];
 }
+
+export function getAllCommands(): Command[] {
+  return db().prepare('SELECT * FROM commands ORDER BY created_at DESC').all() as Command[];
+}

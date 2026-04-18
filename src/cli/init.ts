@@ -147,14 +147,35 @@ export async function handleInit(flags: InitFlags): Promise<void> {
   console.log('');
   console.log(colors.dim('  Quick commands:'));
   console.log(`    ${colors.path('recall search <query>')} ${colors.dim('— Find past commands')}`);
-  console.log(`    ${colors.path('recall ask "<question>"')} ${colors.dim('— AI-powered search')}`);
   console.log(`    ${colors.path('recall recent')}          ${colors.dim('— Last 20 commands')}`);
-  console.log(`    ${colors.path('recall fix')}             ${colors.dim('— Show fixes for errors')}`);
   console.log(`    ${colors.path('recall project')}         ${colors.dim('— Current repo context')}`);
   console.log(`    ${colors.path('recall doctor')}          ${colors.dim('— Check installation')}`);
+
+  // Show experimental commands only when enabled
+  if (process.env.RECALL_EXPERIMENTAL === '1') {
+    console.log('');
+    console.log(colors.dim('  Experimental commands:'));
+    console.log(`    ${colors.path('recall ask "<question>"')} ${colors.dim('— AI-powered search')}`);
+    console.log(`    ${colors.path('recall fix')}             ${colors.dim('— Show fixes for errors')}`);
+  }
+
   console.log('');
 
   // Privacy note
   console.log(`  ${icons.lock} ${colors.dim('All data stays on your machine. Nothing is phoned home.')}`);
+  console.log('');
+
+  // Golden path onboarding: guide user to run 3 commands
+  console.log(`  ${'─'.repeat(50)}`);
+  console.log('');
+  console.log(`  ${icons.brain} ${colors.bold('Try it out!')}`);
+  console.log('');
+  console.log(colors.dim('  Run these 3 commands to see Recall in action:'));
+  console.log(`    ${colors.path('ls')}`);
+  console.log(`    ${colors.path('pwd')}`);
+  console.log(`    ${colors.path('echo "hello"')}`);
+  console.log('');
+  console.log(colors.dim('  Then run:'));
+  console.log(`    ${colors.path('recall recent')}`);
   console.log('');
 }

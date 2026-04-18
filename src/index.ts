@@ -7,6 +7,7 @@
 
 import cac from 'cac';
 import { setIconsEnabled } from './ui/icons.ts';
+import { loadConfig } from './config/index.ts';
 import pkg from '../package.json';
 
 const version = pkg.version;
@@ -16,6 +17,12 @@ const experimentalEnabled = process.env.RECALL_EXPERIMENTAL === '1';
 
 // ─── Global Options ──────────────────────────────────
 cli.option('--no-icons', 'Disable icons in output');
+
+// Load config to check show_icons setting (CLI flag will override this in action handlers)
+const config = loadConfig();
+if (!config.show_icons) {
+  setIconsEnabled(false);
+}
 
 // ─── recall init ─────────────────────────────────────
 cli
@@ -112,6 +119,58 @@ cli
     if (flags.noIcons) setIconsEnabled(false);
     const { handleUninstall } = await import('./cli/uninstall.ts');
     await handleUninstall(flags);
+  });
+
+// ─── recall export ───────────────────────────────────
+cli
+  .command('export', 'Export captured data to JSON')
+  .option('--format <format>', 'Export format (json only)', { default: 'json' })
+  .option('--output <path>', 'Output file path', { default: 'recall-export.json' })
+  .action(async (flags) => {
+    if (flags.noIcons) setIconsEnabled(false);
+    const { handleExport } = await import('./cli/export.ts');
+    handleExport(flags);
+  });
+
+// ─── recall import ───────────────────────────────────
+cli
+  .command('import', 'Import data from Recall export or shell history')
+  .option('--file <path>', 'File to import')
+  .option('--format <format>', 'Format (json, zsh, bash)')
+  .action(async (flags) => {
+    if (flags.noIcons) setIconsEnabled(false);
+    const { handleImport } = await import('./cli/import.ts');
+    handleImport(flags);
+  });
+
+// ─── recall pick ────────────────────────────────────
+cli
+  .command('pick', 'Interactive command picker')
+  .option('--repo <hash>', 'Filter by repo')
+  .option('--failed-only', 'Show only failed commands')
+  .option('--query <query>', 'Search query')
+  .action(async (flags) => {
+    if (flags.noIcons) setIconsEnabled(false);
+    const { handlePick } = await import('./cli/pick.ts');
+    await handlePick(flags);
+  });
+
+// ─── recall pause ────────────────────────────────────
+cli
+  .command('pause', 'Pause command capture')
+  .action(async (flags) => {
+    if (flags.noIcons) setIconsEnabled(false);
+    const { handlePause } = await import('./cli/pause.ts');
+    handlePause();
+  });
+
+// ─── recall resume ───────────────────────────────────
+cli
+  .command('resume', 'Resume command capture')
+  .action(async (flags) => {
+    if (flags.noIcons) setIconsEnabled(false);
+    const { handleResume } = await import('./cli/resume.ts');
+    handleResume();
   });
 
 // ─── recall hook (internal) ──────────────────────────

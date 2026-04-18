@@ -3,6 +3,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { getDbPath, getRecallDir } from '../db/index.ts';
 import { getCommandCount } from '../db/commands.ts';
 import { getRepoCount } from '../db/repos.ts';
@@ -10,6 +11,7 @@ import { getToolCount } from '../db/tools.ts';
 import { getErrorCount, getFixedErrorCount } from '../db/errors.ts';
 import { detectShell, getShellRcPath, isHookInstalledAsync } from '../hooks/detect.ts';
 import { resolveAIConfig } from '../ai/adapter.ts';
+import { isCaptureEnabled, shouldRedactSecrets, getIgnoredPatterns } from '../config/index.ts';
 import { colors, formatHeader, getIcons } from '../ui/index.ts';
 
 export async function handleDoctor(): Promise<void> {
@@ -20,8 +22,22 @@ export async function handleDoctor(): Promise<void> {
   console.log('');
 
   // Check 1: Binary in PATH
-  const binaryFound = process.argv[1]?.includes('recall') || true; // If we're running, we're found
-  logCheck('Binary accessible', binaryFound);
+  let binaryFound = false;
+  let binaryPath = '';
+  try {
+    const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+    binaryPath = execSync(`${whichCmd} recall`, { encoding: 'utf-8' }).trim();
+    binaryFound = true;
+  } catch {
+    binaryFound = false;
+  }
+
+  if (binaryFound) {
+    logCheck(`Binary accessible (${binaryPath})`, true);
+  } else {
+    logCheck('Binary accessible (recall not in PATH)', false);
+    issues++;
+  }
 
   // Check 2: Database
   const dbPath = getDbPath();
@@ -76,6 +92,32 @@ export async function handleDoctor(): Promise<void> {
   console.log(colors.dim(`  AI provider: ${aiConfig.provider}`));
   if (aiConfig.provider === 'openai' || aiConfig.provider === 'openrouter') {
     console.log(colors.dim(`  API key: ${aiConfig.apiKey ? '••••' + aiConfig.apiKey.slice(-4) : 'not set'}`));
+  }
+
+  // Check 7: Privacy settings
+  console.log('');
+  console.log(colors.dim('  Privacy settings:'));
+  const captureEnabled = isCaptureEnabled();
+  logCheck(`Capture enabled`, captureEnabled);
+  if (!captureEnabled) {
+    console.log(colors.dim('    Run \'recall resume\' to enable capture'));
+  }
+
+  const redactSecrets = shouldRedactSecrets();
+  logCheck(`Secret redaction`, redactSecrets);
+  if (!redactSecrets) {
+    console.log(colors.dim('    Warning: Secrets may be stored in plain text'));
+    issues++;
+  }
+
+  const ignoredPatterns = getIgnoredPatterns();
+  if (ignoredPatterns.length > 0) {
+    console.log(`  ${icons.cmd} Ignored patterns (${ignoredPatterns.length}):`);
+    for (const pattern of ignoredPatterns) {
+      console.log(`    ${colors.dim(pattern)}`);
+    }
+  } else {
+    console.log(`  ${icons.cmd} No ignored patterns`);
   }
 
   // Summary
