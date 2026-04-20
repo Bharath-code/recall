@@ -3,10 +3,16 @@
  */
 
 import { writeFileSync } from 'node:fs';
+import { z } from 'zod';
 import { getAllCommands } from '../db/commands.ts';
 import { getAllRepos } from '../db/repos.ts';
 import { getAllTools } from '../db/tools.ts';
-import { colors, formatHeader, getIcons } from '../ui/index.ts';
+import { colors, formatHeader, getIcons, createSpinner } from '../ui/index.ts';
+
+const ExportFlagsSchema = z.object({
+  format: z.enum(['json']).default('json'),
+  output: z.string().default('recall-export.json'),
+});
 
 export interface ExportFlags {
   format?: string;
@@ -16,19 +22,34 @@ export interface ExportFlags {
 export function handleExport(flags: ExportFlags): void {
   const icons = getIcons();
 
+  // Validate flags
+  const validated = ExportFlagsSchema.safeParse(flags);
+  if (!validated.success) {
+    console.log(colors.error('Invalid export options:'));
+    for (const error of validated.error.errors) {
+      console.log(colors.dim(`  ${error.message}`));
+    }
+    process.exit(1);
+  }
+
+  const { format, output } = validated.data;
+
   console.log(formatHeader(`${icons.pkg} recall export`));
   console.log('');
 
-  const format = flags.format || 'json';
   if (format !== 'json') {
     console.log(colors.error('Only JSON format is currently supported.'));
     process.exit(1);
   }
 
+  const spinner = createSpinner('Gathering data...');
+
   // Gather all data
   const commands = getAllCommands();
   const repos = getAllRepos();
   const tools = getAllTools();
+
+  spinner.succeed('Data gathered');
 
   const exportData = {
     version: 1,
@@ -38,7 +59,7 @@ export function handleExport(flags: ExportFlags): void {
     tools,
   };
 
-  const outputPath = flags.output || 'recall-export.json';
+  const outputPath = output;
 
   try {
     writeFileSync(outputPath, JSON.stringify(exportData, null, 2), 'utf-8');

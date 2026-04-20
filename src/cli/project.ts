@@ -10,7 +10,7 @@ import {
   getFailedCommandsByRepo,
 } from '../db/commands.ts';
 import { detectCommonWorkflows } from '../workflows/detector.ts';
-import { colors, formatHeader, formatPath, formatRelativeTime, getIcons } from '../ui/index.ts';
+import { colors, formatHeader, formatPath, formatRelativeTime, getIcons, createSpinner } from '../ui/index.ts';
 
 export async function handleProject(): Promise<void> {
   const icons = getIcons();
@@ -32,7 +32,11 @@ export async function handleProject(): Promise<void> {
 
   const recentCmds = getRecentCommands({ limit: 10, repo_path_hash: repoCtx.hash });
   const startupCmds = getStartupCommands(repoCtx.hash, 5);
+
+  const spinner = createSpinner('Detecting workflows...');
   const workflows = detectCommonWorkflows(repoCtx.hash, 3);
+  spinner.succeed('Workflows detected');
+
   const successfulCmds = getSuccessfulCommandsByRepo(repoCtx.hash, 10);
   const failedCmds = getFailedCommandsByRepo(repoCtx.hash, 5);
 
@@ -44,7 +48,18 @@ export async function handleProject(): Promise<void> {
   if (recentCmds.length === 0) {
     console.log(colors.dim('  No commands captured for this project yet.'));
     console.log(colors.dim('  Commands run in this directory will be tracked.'));
+    console.log('');
+    console.log(colors.dim('  To get started:'));
+    console.log(colors.dim(`  ${icons.cmd} Run some commands in this directory`));
+    console.log(colors.dim(`  ${icons.cmd} Then run ${colors.success('recall recent')} to see them`));
     return;
+  }
+
+  // Show startup commands
+  if (startupCmds.length === 0) {
+    console.log(colors.dim('  Not enough session data for startup commands yet.'));
+    console.log(colors.dim(`  Run more commands in this repo to detect startup patterns.`));
+    console.log('');
   }
 
   // Show startup commands

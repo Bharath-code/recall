@@ -140,6 +140,24 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
   - Generates copyable runbook snippet combining startup commands and most common workflow
 **Testing**: Run `recall project` in a git repo with captured commands to verify all sections display correctly
 
+## Phase 2.5 Implementation Improvements ✅
+**Status**: Completed
+**Files**: `src/db/commands.ts`, `src/workflows/detector.ts`, `src/cli/export.ts`, `src/cli/import.ts`, `src/cli/project.ts`, `tests/db/commands.test.ts`, `tests/workflows/detector.test.ts`, `tests/cli/export-import.test.ts`
+**Changes**:
+- **Performance**: Fixed N+1 query problem in `getStartupCommands` using ROW_NUMBER window function
+- **Error Handling**: Added try-catch blocks to all database query functions with meaningful error messages
+- **Type Safety**: Fixed date string comparison in `detectCommonWorkflows` using Date objects
+- **Type Safety**: Added `isCommand` type guard and used it in all database query functions
+- **Input Validation**: Added Zod schemas for `export` and `import` command flags
+- **Performance**: Added early termination and session size limits to `detectCommonWorkflows` to prevent O(n³) complexity
+- **Edge Cases**: Added input validation and null checks in `detectCommonWorkflows`
+- **UI/UX**: Added loading spinners to `export`, `import`, and `project` commands
+- **UI/UX**: Improved empty state messages in `project` command with actionable suggestions
+- **Testing**: Added unit tests for new database functions in `tests/db/commands.test.ts`
+- **Testing**: Added unit tests for workflow detection in `tests/workflows/detector.test.ts`
+- **Testing**: Added integration tests for export/import/pause/resume in `tests/cli/export-import.test.ts`
+**Testing**: All 62 tests pass, lint passes with no errors
+
 ## Phase 3: AI Layer (Future) - NOT STARTED
 
 **Note**: Per plan, AI features should only be implemented after "dumb but magical" UX is dominant. Current implementation keeps AI features gated behind `RECALL_EXPERIMENTAL=1`.

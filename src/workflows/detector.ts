@@ -142,65 +142,109 @@ export function detectCommonWorkflows(
   minSequenceLength: number = 2,
   maxSequenceLength: number = 4,
 ): DetectedWorkflow[] {
-  const db = getDb();
+  try {
+    const db = getDb();
 
-  // Get all commands for this repo, grouped by session, ordered chronologically
-  const sessions = db.prepare(`
-    SELECT session_id, normalized_command, created_at
-    FROM commands
-    WHERE repo_path_hash = ? AND session_id IS NOT NULL AND source = 'hook'
-    ORDER BY session_id, created_at ASC
-  `).all(repoPathHash) as { session_id: string; normalized_command: string; created_at: string }[];
+    // Validate inputs
+    if (!repoPathHash || typeof repoPathHash !== 'string') {
+      return [];
+    }
+    if (limit < 1 || limit > 100) {
+      limit = 5; // Clamp to reasonable range
+    }
+    if (minSequenceLength < 1 || minSequenceLength > maxSequenceLength) {
+      minSequenceLength = 2; // Reset to default
+    }
+    if (maxSequenceLength < minSequenceLength || maxSequenceLength > 10) {
+      maxSequenceLength = 4; // Reset to default
+    }
 
-  if (sessions.length === 0) return [];
+    // Get all commands for this repo, grouped by session, ordered chronologically
+    const sessions = db.prepare(`
+      SELECT session_id, normalized_command, created_at
+      FROM commands
+      WHERE repo_path_hash = ? AND session_id IS NOT NULL AND source = 'hook'
+      ORDER BY session_id, created_at ASC
+    `).all(repoPathHash) as { session_id: string; normalized_command: string; created_at: string }[];
 
-  // Group by session
-  const sessionGroups = new Map<string, { commands: string[]; last_used: string }>();
-  for (const row of sessions) {
-    const existing = sessionGroups.get(row.session_id) ?? { commands: [], last_used: row.created_at };
-    existing.commands.push(row.normalized_command);
-    existing.last_used = row.created_at;
-    sessionGroups.set(row.session_id, existing);
-  }
+    if (sessions.length === 0) return [];
 
-  const sessionArrays = Array.from(sessionGroups.values());
+    // Early termination for very large command histories
+    const MAX_TOTAL_COMMANDS = 10000;
+    if (sessions.length > MAX_TOTAL_COMMANDS) {
+      // Sample the data to avoid O(n³) complexity
+      sessions.splice(MAX_TOTAL_COMMANDS);
+    }
 
-  // Count all possible sequences of length minSequenceLength to maxSequenceLength
-  const sequenceCounts = new Map<string, { commands: string[]; count: number; last_used: string }>();
+    // Group by session
+    const sessionGroups = new Map<string, { commands: string[]; last_used: string }>();
+    for (const row of sessions) {
+      if (!row.session_id || !row.normalized_command || !row.created_at) {
+        continue; // Skip malformed rows
+      }
+      const existing = sessionGroups.get(row.session_id) ?? { commands: [], last_used: row.created_at };
+      // Limit session size to prevent excessive processing
+      if (existing.commands.length < 1000) {
+        existing.commands.push(row.normalized_command);
+        existing.last_used = row.created_at;
+        sessionGroups.set(row.session_id, existing);
+      }
+    }
 
-  for (const session of sessionArrays) {
-    const { commands, last_used } = session;
+    const sessionArrays = Array.from(sessionGroups.values());
 
-    for (let len = minSequenceLength; len <= maxSequenceLength; len++) {
-      for (let i = 0; i <= commands.length - len; i++) {
-        const sequence = commands.slice(i, i + len);
-        const key = sequence.join('|');
+    // Early termination if too many sessions
+    const MAX_SESSIONS = 100;
+    if (sessionArrays.length > MAX_SESSIONS) {
+      sessionArrays.splice(MAX_SESSIONS);
+    }
 
-        const existing = sequenceCounts.get(key);
-        if (existing) {
-          existing.count++;
-          if (last_used > existing.last_used) {
-            existing.last_used = last_used;
+    // Filter out sessions with too few commands
+    const validSessions = sessionArrays.filter(s => s.commands.length >= minSequenceLength);
+    if (validSessions.length === 0) return [];
+
+    // Count all possible sequences of length minSequenceLength to maxSequenceLength
+    const sequenceCounts = new Map<string, { commands: string[]; count: number; last_used: string }>();
+
+    for (const session of validSessions) {
+      const { commands, last_used } = session;
+      const lastUsedDate = new Date(last_used);
+
+      for (let len = minSequenceLength; len <= maxSequenceLength; len++) {
+        for (let i = 0; i <= commands.length - len; i++) {
+          const sequence = commands.slice(i, i + len);
+          const key = sequence.join('|');
+
+          const existing = sequenceCounts.get(key);
+          if (existing) {
+            existing.count++;
+            const existingDate = new Date(existing.last_used);
+            if (lastUsedDate > existingDate) {
+              existing.last_used = last_used;
+            }
+          } else {
+            sequenceCounts.set(key, { commands: sequence, count: 1, last_used });
           }
-        } else {
-          sequenceCounts.set(key, { commands: sequence, count: 1, last_used });
         }
       }
     }
+
+    // Filter by minimum frequency and sort by count
+    const workflows = Array.from(sequenceCounts.values())
+      .filter(item => item.count >= 2)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map(item => ({
+        commands: item.commands,
+        frequency: item.count,
+        confidence: item.count / validSessions.length,
+        repo_path_hash: repoPathHash,
+        last_used: item.last_used,
+      }));
+
+    return workflows;
+  } catch (err) {
+    console.error('Failed to detect common workflows:', err instanceof Error ? err.message : 'Unknown error');
+    return [];
   }
-
-  // Filter by minimum frequency and sort by count
-  const workflows = Array.from(sequenceCounts.values())
-    .filter(item => item.count >= 2)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-    .map(item => ({
-      commands: item.commands,
-      frequency: item.count,
-      confidence: item.count / sessionArrays.length,
-      repo_path_hash: repoPathHash,
-      last_used: item.last_used,
-    }));
-
-  return workflows;
 }

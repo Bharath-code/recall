@@ -3,6 +3,7 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
+import { z } from 'zod';
 import { insertCommand } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { batchUpsertTools } from '../db/tools.ts';
@@ -11,6 +12,11 @@ import { normalize, shouldSkipCommand } from '../import/normalizer.ts';
 import { getRecentNormalizedCommands } from '../db/commands.ts';
 import { colors, formatHeader, getIcons, createSpinner } from '../ui/index.ts';
 
+const ImportFlagsSchema = z.object({
+  file: z.string().min(1, 'File path is required'),
+  format: z.enum(['json', 'zsh', 'bash']).optional(),
+});
+
 export interface ImportFlags {
   file?: string;
   format?: string;
@@ -18,14 +24,21 @@ export interface ImportFlags {
 
 export function handleImport(flags: ImportFlags): void {
   const icons = getIcons();
-  const filePath = flags.file;
 
-  if (!filePath) {
-    console.log(colors.error('Usage: recall import --file <path>'));
+  // Validate flags
+  const validated = ImportFlagsSchema.safeParse(flags);
+  if (!validated.success) {
+    console.log(colors.error('Invalid import options:'));
+    for (const error of validated.error.errors) {
+      console.log(colors.dim(`  ${error.message}`));
+    }
+    console.log(colors.dim('  Usage: recall import --file <path>'));
     console.log(colors.dim('  Example: recall import --file recall-export.json'));
     console.log(colors.dim('  Example: recall import --file ~/.zsh_history'));
     process.exit(1);
   }
+
+  const { file: filePath, format: explicitFormat } = validated.data;
 
   if (!existsSync(filePath)) {
     console.log(colors.error(`File not found: ${filePath}`));
@@ -36,14 +49,20 @@ export function handleImport(flags: ImportFlags): void {
   console.log('');
 
   // Detect format based on file extension or content
-  const format = detectFormat(filePath, flags.format);
+  const detectedFormat = detectFormat(filePath, explicitFormat);
 
-  if (format === 'recall-json') {
+  if (detectedFormat === 'recall-json') {
+    const spinner = createSpinner('Importing Recall JSON...');
     importRecallJSON(filePath);
-  } else if (format === 'zsh-history') {
+    spinner.succeed('Import complete');
+  } else if (detectedFormat === 'zsh-history') {
+    const spinner = createSpinner('Importing zsh history...');
     importShellHistory(filePath, 'zsh');
-  } else if (format === 'bash-history') {
+    spinner.succeed('Import complete');
+  } else if (detectedFormat === 'bash-history') {
+    const spinner = createSpinner('Importing bash history...');
     importShellHistory(filePath, 'bash');
+    spinner.succeed('Import complete');
   } else {
     console.log(colors.error('Unknown file format'));
     process.exit(1);
