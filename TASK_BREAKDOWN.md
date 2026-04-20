@@ -117,6 +117,29 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
 - Provides tight feedback loop for immediate value
 **Testing**: Run `recall init` and verify onboarding message appears
 
+### 2.4 Enhanced Project Memory ✅
+**Status**: Completed
+**Files**: `src/db/commands.ts`, `src/workflows/detector.ts`, `src/cli/project.ts`
+**Changes**:
+- Added session tracking queries to `src/db/commands.ts`:
+  - `getCommandsByRepo()` - Get commands for a specific repo
+  - `getSessionsByRepo()` - Get all sessions for a repo
+  - `getStartupCommands()` - Get first N commands per session, sorted by frequency
+  - `getSuccessfulCommandsByRepo()` - Get successful commands for a repo
+  - `getFailedCommandsByRepo()` - Get failed commands for a repo
+- Enhanced `src/workflows/detector.ts`:
+  - Added `last_used` field to `DetectedWorkflow` interface
+  - Added `detectCommonWorkflows()` function to find recurring command sequences
+  - Analyzes command sequences in repo context
+  - Finds top 3-5 recurring patterns with frequency and last used timestamp
+- Enhanced `src/cli/project.ts`:
+  - Shows startup commands (first commands per session)
+  - Shows common workflows with frequency and last used time
+  - Shows recent failures with exit codes
+  - Shows last known good command when failures exist
+  - Generates copyable runbook snippet combining startup commands and most common workflow
+**Testing**: Run `recall project` in a git repo with captured commands to verify all sections display correctly
+
 ## Phase 3: AI Layer (Future) - NOT STARTED
 
 **Note**: Per plan, AI features should only be implemented after "dumb but magical" UX is dominant. Current implementation keeps AI features gated behind `RECALL_EXPERIMENTAL=1`.
@@ -126,22 +149,6 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
 **Approach**: Keep `RECALL_EXPERIMENTAL=1` for AI features
 **Files**: Already exist (ask.ts, fix.ts, embed.ts)
 **Note**: Ensure all CLI commands work without AI. AI features are enhancements, not requirements.
-
-## Phase 2: Enhanced Project Memory - NOT STARTED
-
-**Note**: This was marked as 2-4 weeks and requires more extensive work.
-
-### 2.4 Enhanced Project Memory
-**Status**: Not started
-**Required work**:
-- Add session tracking to shell hooks (session-id already exists)
-- Implement startup command detection (first N commands after entering repo)
-- Implement workflow detection (command sequence analysis)
-- Show "last known good" vs "recent failures"
-- Generate copyable runbook snippet
-- Enhance `recall project` output
-
-**Implementation complexity**: High - requires session boundary detection, pattern recognition algorithms, and significant UI enhancements.
 
 ## Testing Checklist
 
@@ -158,6 +165,10 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
 - [ ] Run `recall resume` - verify capture enabled
 - [ ] Run `recall doctor` - verify privacy settings shown
 - [ ] Run `recall init` - verify onboarding message shown
+- [ ] Run `recall project` in git repo - verify startup commands display
+- [ ] Run `recall project` in git repo - verify workflows display
+- [ ] Run `recall project` in git repo - verify failures and last known good display
+- [ ] Run `recall project` in git repo - verify runbook snippet generates
 
 ## Files Modified/Created
 
@@ -169,6 +180,8 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
 - `src/db/commands.ts`
 - `src/db/repos.ts`
 - `src/cli/hook.ts`
+- `src/workflows/detector.ts`
+- `src/cli/project.ts`
 
 **Created**:
 - `src/cli/export.ts`
@@ -182,4 +195,4 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
 1. Run full test suite to ensure no regressions
 2. Manually test each new feature
 3. Update documentation if needed
-4. Consider implementing Enhanced Project Memory (Phase 2.4) if prioritized
+4. Phase 3 (AI Layer) is gated behind `RECALL_EXPERIMENTAL=1` and should only be implemented after "dumb but magical" UX is dominant

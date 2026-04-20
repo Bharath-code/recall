@@ -223,3 +223,74 @@ export function getTopCommands(limit: number = 10): { normalized_command: string
 export function getAllCommands(): Command[] {
   return db().prepare('SELECT * FROM commands ORDER BY created_at DESC').all() as Command[];
 }
+
+export function getCommandsByRepo(repoPathHash: string, limit: number = 100): Command[] {
+  return db().prepare(`
+    SELECT * FROM commands
+    WHERE repo_path_hash = ? AND source = 'hook'
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(repoPathHash, limit) as Command[];
+}
+
+export function getSessionsByRepo(repoPathHash: string): { session_id: string; created_at: string }[] {
+  return db().prepare(`
+    SELECT DISTINCT session_id, MIN(created_at) as created_at
+    FROM commands
+    WHERE repo_path_hash = ? AND session_id IS NOT NULL
+    GROUP BY session_id
+    ORDER BY created_at DESC
+  `).all(repoPathHash) as { session_id: string; created_at: string }[];
+}
+
+export function getStartupCommands(repoPathHash: string, limit: number = 5): Command[] {
+  // Get first N commands from each session in the repo
+  const sessions = getSessionsByRepo(repoPathHash);
+  const startupCommands: Command[] = [];
+
+  for (const session of sessions) {
+    const sessionCommands = db().prepare(`
+      SELECT * FROM commands
+      WHERE repo_path_hash = ? AND session_id = ? AND source = 'hook'
+      ORDER BY created_at ASC
+      LIMIT ?
+    `).all(repoPathHash, session.session_id, limit) as Command[];
+
+    startupCommands.push(...sessionCommands);
+  }
+
+  // Sort by frequency and return most common
+  const commandCounts = new Map<string, { command: Command; count: number }>();
+  for (const cmd of startupCommands) {
+    const normalized = cmd.normalized_command;
+    const existing = commandCounts.get(normalized);
+    if (existing) {
+      existing.count++;
+    } else {
+      commandCounts.set(normalized, { command: cmd, count: 1 });
+    }
+  }
+
+  return Array.from(commandCounts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map(item => item.command);
+}
+
+export function getSuccessfulCommandsByRepo(repoPathHash: string, limit: number = 20): Command[] {
+  return db().prepare(`
+    SELECT * FROM commands
+    WHERE repo_path_hash = ? AND exit_code = 0 AND source = 'hook'
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(repoPathHash, limit) as Command[];
+}
+
+export function getFailedCommandsByRepo(repoPathHash: string, limit: number = 10): Command[] {
+  return db().prepare(`
+    SELECT * FROM commands
+    WHERE repo_path_hash = ? AND exit_code != 0 AND exit_code IS NOT NULL AND source = 'hook'
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(repoPathHash, limit) as Command[];
+}
