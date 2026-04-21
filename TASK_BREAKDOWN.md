@@ -158,14 +158,23 @@ This document breaks down the implementation tasks from fix_v2.md into actionabl
 - **Testing**: Added integration tests for export/import/pause/resume in `tests/cli/export-import.test.ts`
 **Testing**: All 62 tests pass, lint passes with no errors
 
-## Phase 3: AI Layer (Future) - NOT STARTED
+## Phase 3: AI Layer ✅
 
 **Note**: Per plan, AI features should only be implemented after "dumb but magical" UX is dominant. Current implementation keeps AI features gated behind `RECALL_EXPERIMENTAL=1`.
 
-### 3.1 Optional AI Features
-**Status**: Not started (gated)
+### 3.1 Optional AI Features ✅
+**Status**: Completed (gated)
 **Approach**: Keep `RECALL_EXPERIMENTAL=1` for AI features
-**Files**: Already exist (ask.ts, fix.ts, embed.ts)
+**Files**: `src/cli/ask.ts`, `src/cli/fix.ts`, `src/cli/embed.ts`, `src/ai/adapter.ts`, `src/ai/embeddings.ts`, `docs/AI_FEATURES.md`
+**Changes**:
+- **Error Handling**: Added timeout protection (10s for provider init, 15s for search) with automatic fallback to keyword search
+- **Error Handling**: Added detailed error messages when AI fails, showing fallback status to user
+- **Configuration Validation**: Added `validateAIConfig()` function to validate provider, API key, baseUrl, and model before attempting to use AI
+- **Configuration Validation**: Integration in `createEmbedder()` to validate config and fall back to NoopEmbedder on invalid config
+- **Semantic Search**: Improved `searchSimilar()` with minimum score threshold (0.3) and confidence scoring (high/medium/low)
+- **Semantic Search**: Updated `semanticSearch()` to use improved filtering and remove redundant threshold check
+- **Documentation**: Created comprehensive AI_FEATURES.md documentation with setup examples, provider configs, and troubleshooting
+- **Testing**: All 62 tests pass, lint passes with no errors
 **Note**: Ensure all CLI commands work without AI. AI features are enhancements, not requirements.
 
 ## Testing Checklist

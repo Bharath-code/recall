@@ -30,20 +30,33 @@ export async function handleAsk(query: string): Promise<void> {
 
   let results: Command[] = [];
   let searchMethod = '';
+  let aiError: string | null = null;
 
   const config = resolveAIConfig();
   const spinner = createSpinner(`Searching with ${config.provider}...`, 'ai');
   spinner.start();
 
   try {
-    const embedder = await createEmbedder(config);
+    const embedder = await Promise.race([
+      createEmbedder(config),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('AI provider timeout')), 10000))
+    ]) as Awaited<ReturnType<typeof createEmbedder>>;
 
     if (!(embedder instanceof NoopEmbedder)) {
       searchMethod = embedder.name;
-      results = await semanticSearch(embedder, query.trim());
+      try {
+        results = await Promise.race<Command[]>([
+          semanticSearch(embedder, query.trim()),
+          new Promise<Command[]>((_, reject) => setTimeout(() => reject(new Error('Search timeout')), 15000))
+        ]);
+      } catch (searchErr) {
+        aiError = searchErr instanceof Error ? searchErr.message : 'Search failed';
+        console.error(colors.dim(`  AI search failed: ${aiError}`));
+      }
     }
   } catch (err) {
-    // AI failed — fall through to keyword
+    aiError = err instanceof Error ? err.message : 'AI provider initialization failed';
+    console.error(colors.dim(`  AI provider failed: ${aiError}`));
   }
 
   // Keyword search fallback
@@ -65,10 +78,17 @@ export async function handleAsk(query: string): Promise<void> {
     console.log(colors.dim('  • Try rephrasing — natural language works best'));
     console.log(colors.dim('  • Use \'recall search\' for exact keyword matching'));
     console.log(colors.dim('  • Run more commands — Recall learns over time'));
+    if (aiError) {
+      console.log('');
+      console.log(colors.dim(`  ${icons.brain} AI was unavailable (${aiError})`));
+    }
     return;
   }
 
   console.log(colors.dim(`  Found via ${colors.bold(searchMethod)} search:`));
+  if (aiError && searchMethod === 'keyword') {
+    console.log(colors.dim(`  (AI unavailable, using keyword fallback)`));
+  }
   console.log('');
 
   for (let i = 0; i < results.length; i++) {
@@ -130,11 +150,10 @@ async function semanticSearch(
     vector: deserializeVector(r.vector),
   }));
 
-  const topResults = searchSimilar(queryVector, storedVectors, 10);
+  const topResults = searchSimilar(queryVector, storedVectors, 10, 0.25);
 
   const commands: Command[] = [];
   for (const result of topResults) {
-    if (result.score < 0.25) continue; // Minimum relevance threshold
     const cmd = getCommandById(result.id);
     if (cmd) commands.push(cmd);
   }

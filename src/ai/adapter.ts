@@ -102,6 +102,41 @@ async function openAICompatEmbedder(
   return new SDKEmbedder(name, client.embedding(model));
 }
 
+// ─── Configuration Validation ──────────────────────────────────────────────────
+
+export function validateAIConfig(config: AIConfig): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Validate provider
+  const validProviders: AIProvider[] = ['openai', 'openrouter', 'ollama', 'google', 'cohere', 'azure', 'custom', 'local', 'none'];
+  if (!validProviders.includes(config.provider)) {
+    errors.push(`Invalid provider: ${config.provider}`);
+  }
+
+  // For non-local providers, require API key or baseUrl
+  if (config.provider !== 'local' && config.provider !== 'none') {
+    if (!config.apiKey && !config.baseUrl) {
+      errors.push(`Provider ${config.provider} requires either API key or base URL`);
+    }
+
+    // Validate baseUrl format if provided
+    if (config.baseUrl) {
+      try {
+        new URL(config.baseUrl);
+      } catch {
+        errors.push(`Invalid base URL: ${config.baseUrl}`);
+      }
+    }
+
+    // Validate embedding model if provided
+    if (config.embeddingModel && config.embeddingModel.trim().length === 0) {
+      errors.push('Embedding model cannot be empty');
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 // ─── Config Resolution ────────────────────────────────────────────────────────
 
 export function resolveAIConfig(): AIConfig {
@@ -202,6 +237,17 @@ function resolveKeyForProvider(provider: AIProvider): string | undefined {
 
 export async function createEmbedder(config?: AIConfig): Promise<RecallEmbedder> {
   const c = config ?? resolveAIConfig();
+
+  // Validate configuration
+  const validation = validateAIConfig(c);
+  if (!validation.valid) {
+    process.stderr.write(`[recall] Invalid AI configuration:\n`);
+    for (const error of validation.errors) {
+      process.stderr.write(`[recall]   - ${error}\n`);
+    }
+    process.stderr.write(`[recall] Falling back to keyword search.\n`);
+    return new NoopEmbedder();
+  }
 
   try {
     switch (c.provider) {

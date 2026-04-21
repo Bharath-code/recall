@@ -30,16 +30,25 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 /**
  * Find top-K most similar stored vectors to a query vector.
+ * Improved with minimum score threshold and confidence scoring.
  */
 export function searchSimilar(
   queryVector: number[],
   storedVectors: { id: number; vector: number[] }[],
   topK: number = 10,
-): { id: number; score: number }[] {
-  return storedVectors
+  minScore: number = 0.3,
+): { id: number; score: number; confidence: 'high' | 'medium' | 'low' }[] {
+  const results = storedVectors
     .map(sv => ({ id: sv.id, score: cosineSimilarity(queryVector, sv.vector) }))
+    .filter(r => r.score >= minScore) // Filter out low-quality matches
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
+
+  // Add confidence levels based on score
+  return results.map(r => ({
+    ...r,
+    confidence: r.score >= 0.7 ? 'high' : r.score >= 0.5 ? 'medium' : 'low',
+  }));
 }
 
 /**
