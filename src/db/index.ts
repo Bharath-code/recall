@@ -65,6 +65,29 @@ function applyCompatibilityMigrations(db: Database): void {
   }
 
   db.exec('CREATE INDEX IF NOT EXISTS idx_commands_source ON commands(source)');
+
+  // Migrate tools table: remove restrictive CHECK constraint to allow new package managers
+  try {
+    db.prepare("INSERT INTO tools (tool_name, source) VALUES ('__migration_test__', 'pip')").run();
+    db.prepare("DELETE FROM tools WHERE tool_name = '__migration_test__'").run();
+  } catch {
+    // CHECK constraint still exists — recreate table without it
+    db.exec(`
+      CREATE TABLE tools_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tool_name TEXT NOT NULL UNIQUE,
+        source TEXT NOT NULL,
+        installed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        last_used_at TEXT,
+        usage_count INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+    db.exec(`INSERT INTO tools_new SELECT * FROM tools`);
+    db.exec(`DROP TABLE tools`);
+    db.exec(`ALTER TABLE tools_new RENAME TO tools`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tools_name ON tools(tool_name)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tools_usage ON tools(usage_count)`);
+  }
 }
 
 function splitStatements(sql: string): string[] {

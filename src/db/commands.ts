@@ -296,6 +296,19 @@ export function getTopCommands(limit: number = 10): { normalized_command: string
   });
 }
 
+export function getTopCommandsSince(days: number = 7, limit: number = 10): { normalized_command: string; count: number }[] {
+  return withDbCatch('get top commands since', [], () => {
+    return db().prepare(`
+      SELECT normalized_command, COUNT(*) as count
+      FROM commands
+      WHERE source = 'hook' AND created_at >= datetime('now', ?)
+      GROUP BY normalized_command
+      ORDER BY count DESC
+      LIMIT ?
+    `).all(`-${days} days`, limit) as { normalized_command: string; count: number }[];
+  });
+}
+
 export function getAllCommands(): Command[] {
   return withDbCatch('get all commands', [], () => {
     const results = db().prepare('SELECT * FROM commands ORDER BY created_at DESC').all();

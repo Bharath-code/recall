@@ -177,6 +177,34 @@ cli
     handleResume();
   });
 
+// ─── recall digest ───────────────────────────────────
+cli
+  .command('digest', 'Weekly summary of your terminal activity')
+  .action(async (flags) => {
+    applyIconSetting(flags);
+    const { handleDigest } = await import('./cli/digest.ts');
+    handleDigest();
+  });
+
+// ─── recall workflows ────────────────────────────────
+cli
+  .command('workflows', 'Detect and list repeated command sequences')
+  .action(async (flags) => {
+    applyIconSetting(flags);
+    const { handleWorkflows } = await import('./cli/workflows.ts');
+    handleWorkflows();
+  });
+
+// ─── recall restore ──────────────────────────────────
+cli
+  .command('restore', 'Replay a stored workflow')
+  .option('--id <id>', 'Workflow ID to restore')
+  .action(async (flags) => {
+    applyIconSetting(flags);
+    const { handleRestore } = await import('./cli/restore.ts');
+    handleRestore(flags);
+  });
+
 // ─── recall hook (internal) ──────────────────────────
 cli
   .command('hook <action>', 'Internal: shell hook actions')

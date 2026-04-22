@@ -63,8 +63,6 @@ export function isHookInstalled(rcPath: string): boolean {
  * Check if hook is installed — async version.
  */
 export async function isHookInstalledAsync(rcPath: string): Promise<boolean> {
-  if (!existsSync(rcPath)) return false;
-
   try {
     const text = await Bun.file(rcPath).text();
     return text.includes(ZSH_HOOK_MARKER) || text.includes(BASH_HOOK_MARKER);
@@ -79,7 +77,12 @@ export async function isHookInstalledAsync(rcPath: string): Promise<boolean> {
 export async function appendHookToRc(rcPath: string, snippet: string): Promise<boolean> {
   if (await isHookInstalledAsync(rcPath)) return false; // already installed
 
-  const existing = existsSync(rcPath) ? await Bun.file(rcPath).text() : '';
+  let existing = '';
+  try {
+    existing = await Bun.file(rcPath).text();
+  } catch {
+    // File doesn't exist yet — start empty
+  }
   const newContent = existing.trimEnd() + '\n\n' + snippet + '\n';
   await Bun.write(rcPath, newContent);
   return true;
@@ -89,9 +92,12 @@ export async function appendHookToRc(rcPath: string, snippet: string): Promise<b
  * Remove hook from RC file.
  */
 export async function removeHookFromRc(rcPath: string): Promise<boolean> {
-  if (!existsSync(rcPath)) return false;
-
-  const content = await Bun.file(rcPath).text();
+  let content: string;
+  try {
+    content = await Bun.file(rcPath).text();
+  } catch {
+    return false;
+  }
   const startMarker = '# ─── Recall Shell Hook';
   const endMarker = '# ─── End Recall Hook';
 

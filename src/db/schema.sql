@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_repos_hash ON repos(repo_path_hash);
 CREATE TABLE IF NOT EXISTS tools (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool_name TEXT NOT NULL UNIQUE,
-  source TEXT NOT NULL CHECK(source IN ('brew', 'npm', 'cargo', 'manual')),
+  source TEXT NOT NULL,
   installed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   last_used_at TEXT,
   usage_count INTEGER NOT NULL DEFAULT 0

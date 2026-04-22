@@ -2,7 +2,7 @@
  * recall init — Onboarding wizard
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { detectShell, getShellRcPath, appendHookToRc, isHookInstalledAsync } from '../hooks/detect.ts';
 import { generateZshSnippet, ZSH_EVAL_LINE } from '../hooks/zsh-snippet.ts';
@@ -87,7 +87,7 @@ export async function handleInit(flags: InitFlags): Promise<void> {
     spinner.start();
 
     try {
-      const content = readFileSync(histPath, 'utf-8');
+      const content = await Bun.file(histPath).text();
       const parsed = currentShell === 'zsh'
         ? parseZshHistory(content)
         : parseBashHistory(content);

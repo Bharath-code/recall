@@ -4,7 +4,7 @@ import { getDb } from './index.ts';
 export interface Tool {
   id: number;
   tool_name: string;
-  source: 'brew' | 'npm' | 'cargo' | 'manual';
+  source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'manual';
   installed_at: string;
   last_used_at: string | null;
   usage_count: number;

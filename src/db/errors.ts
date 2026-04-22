@@ -100,3 +100,12 @@ export function getFixedErrorCount(): number {
   ).get() as { count: number };
   return row.count;
 }
+
+export function getRecentErrorsSince(days: number = 7, limit: number = 5): ErrorRecord[] {
+  return db().prepare(`
+    SELECT * FROM errors
+    WHERE last_seen_at >= datetime('now', ?)
+    ORDER BY occurrences DESC, last_seen_at DESC
+    LIMIT ?
+  `).all(`-${days} days`, limit) as ErrorRecord[];
+}

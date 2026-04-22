@@ -3,7 +3,6 @@
  */
 
 import { existsSync } from 'node:fs';
-import { execSync } from 'node:child_process';
 import { getDbPath, getRecallDir } from '../db/index.ts';
 import { getCommandCount } from '../db/commands.ts';
 import { getRepoCount } from '../db/repos.ts';
@@ -30,15 +29,8 @@ export async function handleDoctor(): Promise<void> {
 
   // Check 1: Binary in PATH
   console.log(formatSection('Installation'));
-  let binaryFound = false;
-  let binaryPath = '';
-  try {
-    const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-    binaryPath = execSync(`${whichCmd} recall`, { encoding: 'utf-8' }).trim();
-    binaryFound = true;
-  } catch {
-    binaryFound = false;
-  }
+  const binaryPath = Bun.which('recall');
+  const binaryFound = binaryPath !== null;
 
   if (binaryFound) {
     logCheck(`Binary accessible (${binaryPath})`, true);
