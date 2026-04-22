@@ -28,6 +28,76 @@
 import { embed, embedMany } from 'ai';
 import type { EmbeddingModel } from 'ai';
 
+// ─── Rate Limiter ─────────────────────────────────────────────────────────
+
+interface RateLimiter {
+  lastRequest: number;
+  requestCount: number;
+  windowStart: number;
+}
+
+const rateLimiters = new Map<string, RateLimiter>();
+
+const DEFAULT_RATE_LIMIT = {
+  requestsPerMinute: 60,
+  requestsPerHour: 1000,
+};
+
+function checkRateLimit(provider: string): boolean {
+  const now = Date.now();
+  const limiter = rateLimiters.get(provider) || {
+    lastRequest: 0,
+    requestCount: 0,
+    windowStart: now,
+  };
+
+  // Reset counters if window has expired (1 minute)
+  if (now - limiter.windowStart > 60000) {
+    limiter.requestCount = 0;
+    limiter.windowStart = now;
+  }
+
+  // Check rate limit
+  if (limiter.requestCount >= DEFAULT_RATE_LIMIT.requestsPerMinute) {
+    return false; // Rate limit exceeded
+  }
+
+  limiter.requestCount++;
+  limiter.lastRequest = now;
+  rateLimiters.set(provider, limiter);
+  return true;
+}
+
+async function withRateLimit<T>(
+  provider: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    if (checkRateLimit(provider)) {
+      try {
+        return await fn();
+      } catch (err) {
+        attempt++;
+        if (attempt >= maxRetries) throw err;
+        
+        // Exponential backoff
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    } else {
+      // Rate limit exceeded, wait and retry
+      const delay = Math.pow(2, attempt) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      attempt++;
+    }
+  }
+
+  throw new Error('Rate limit exceeded after retries');
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AIProvider =
@@ -68,14 +138,18 @@ export class SDKEmbedder implements RecallEmbedder {
   }
 
   async embed(text: string): Promise<number[]> {
-    const { embedding } = await embed({ model: this.model, value: text });
-    return embedding;
+    return withRateLimit(this.name, async () => {
+      const { embedding } = await embed({ model: this.model, value: text });
+      return embedding;
+    });
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) return [];
-    const { embeddings } = await embedMany({ model: this.model, values: texts });
-    return embeddings;
+    return withRateLimit(this.name, async () => {
+      const { embeddings } = await embedMany({ model: this.model, values: texts });
+      return embeddings;
+    });
   }
 }
 

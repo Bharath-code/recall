@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { normalize, shouldSkipCommand, isDuplicate } from '../import/normalizer.ts';
 import { insertCommand, updateCommand, getRecentNormalizedCommands } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
+import { getDb } from '../db/index.ts';
 import { getRepoContext } from '../repos/detector.ts';
 import { generateZshSnippet } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet } from '../hooks/bash-snippet.ts';
@@ -87,32 +88,43 @@ export async function handleHookCapture(args: Record<string, string | undefined>
 
     // Detect git repo context
     const repoCtx = await getRepoContext(parsed.cwd);
-    if (repoCtx) {
-      upsertRepo({
-        repo_path_hash: repoCtx.hash,
-        repo_name: repoCtx.name,
-        repo_root: repoCtx.root,
-      });
-    }
+    
+    // Wrap in transaction for atomicity
+    const db = getDb();
+    const transaction = db.transaction(() => {
+      if (repoCtx) {
+        upsertRepo({
+          repo_path_hash: repoCtx.hash,
+          repo_name: repoCtx.name,
+          repo_root: repoCtx.root,
+        });
+      }
 
-    const id = insertCommand({
-      raw_command: redactSecretsFromCommand(parsed.rawCommand),
-      normalized_command: redactSecretsFromCommand(normalized),
-      cwd: parsed.cwd,
-      repo_path_hash: repoCtx?.hash ?? null,
-      shell: parsed.shell,
-      session_id: parsed.sessionId ?? null,
-      exit_code: parsed.exitCode ? parseInt(parsed.exitCode, 10) : null,
-      duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : null,
+      const id = insertCommand({
+        raw_command: redactSecretsFromCommand(parsed.rawCommand),
+        normalized_command: redactSecretsFromCommand(normalized),
+        cwd: parsed.cwd,
+        repo_path_hash: repoCtx?.hash ?? null,
+        shell: parsed.shell,
+        session_id: parsed.sessionId ?? null,
+        exit_code: parsed.exitCode ? parseInt(parsed.exitCode, 10) : null,
+        duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : null,
+      });
+
+      return id;
     });
+
+    const id = transaction();
 
     // Spawn background embedding generator only when explicitly enabled.
     if (shouldAutoEmbed()) spawnEmbedder();
 
     // Output the command ID for the shell hook to use in update
     process.stdout.write(String(id));
-  } catch {
-    // Silent failure — never break the user's shell
+  } catch (err) {
+    // Log to stderr for debugging while maintaining shell stability
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    process.stderr.write(`[recall] Hook capture failed: ${errorMsg}\n`);
   }
 }
 
@@ -131,8 +143,10 @@ export async function handleHookUpdate(args: Record<string, string | undefined>)
       exit_code: parseInt(parsed.exitCode, 10),
       duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : undefined,
     });
-  } catch {
-    // Silent failure
+  } catch (err) {
+    // Log to stderr for debugging while maintaining shell stability
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    process.stderr.write(`[recall] Hook update failed: ${errorMsg}\n`);
   }
 }
 

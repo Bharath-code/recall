@@ -3,7 +3,15 @@
  */
 
 import { searchCommands, searchCommandsKeyword } from '../db/commands.ts';
-import { colors, formatCommandLine, formatHeader, formatCount, getIcons } from '../ui/index.ts';
+import { 
+  colors, 
+  formatCommandLine, 
+  formatHeader, 
+  formatCount, 
+  getIcons, 
+  formatNoSearchResults,
+  SPACING,
+} from '../ui/index.ts';
 
 export interface SearchFlags {
   repo?: string;
@@ -15,7 +23,7 @@ export interface SearchFlags {
 export function handleSearch(query: string, flags: SearchFlags): void {
   if (!query || !query.trim()) {
     console.log(colors.error('Usage: recall search <query>'));
-    console.log(colors.dim('  Example: recall search "docker prune"'));
+    console.log(colors.textDim(`${SPACING.indent}Example: recall search "docker prune"`));
     process.exit(1);
   }
 
@@ -38,25 +46,19 @@ export function handleSearch(query: string, flags: SearchFlags): void {
   }
 
   if (results.length === 0) {
-    console.log(formatHeader(`${icons.search} recall search "${query}"`));
-    console.log('');
-    console.log(colors.dim('  No matching commands found.'));
-    console.log('');
-    console.log(colors.dim('  Tips:'));
-    console.log(colors.dim('  • Check spelling'));
-    console.log(colors.dim('  • Try partial words (e.g., "dock" instead of "docker")'));
-    console.log(colors.dim('  • Use \'recall recent\' to see all recent commands'));
+    const emptyState = formatNoSearchResults(query);
+    console.log(emptyState.join('\n'));
     return;
   }
 
   console.log(formatHeader(`${icons.search} recall search "${query}"`));
   console.log('');
-  console.log(colors.dim(`  Found ${formatCount(results.length, 'match', 'matches')}:`));
+  console.log(colors.textDim(`${SPACING.indent}Found ${formatCount(results.length, 'match', 'matches')}:`));
   console.log('');
 
   for (let i = 0; i < results.length; i++) {
     const cmd = results[i];
-    const num = colors.dim(`  ${String(i + 1).padStart(2)}.`);
+    const num = colors.textDim(`${SPACING.indent}${String(i + 1).padStart(2)}.`);
     console.log(`${num} ${formatCommandLine({
       command: cmd.raw_command,
       cwd: cmd.cwd,

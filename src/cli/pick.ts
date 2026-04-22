@@ -137,10 +137,18 @@ async function runPicker(commands: Command[]): Promise<Command | null> {
       }
     });
 
+    // Handle terminal resize
+    const handleResize = () => {
+      render();
+    };
+
+    process.on('SIGWINCH', handleResize);
+
     function cleanup() {
       input.setRawMode(false);
       input.pause();
       input.removeAllListeners('data');
+      process.off('SIGWINCH', handleResize);
       rl.close();
       output.write('\x1B[?25h'); // Show cursor
       output.write('\x1B[2J\x1B[0f'); // Clear screen

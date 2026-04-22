@@ -3,12 +3,13 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
+import { resolve, normalize } from 'node:path';
 import { z } from 'zod';
 import { insertCommand } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { batchUpsertTools } from '../db/tools.ts';
 import { parseZshHistory, parseBashHistory } from '../import/history-parser.ts';
-import { normalize, shouldSkipCommand } from '../import/normalizer.ts';
+import { normalize as normalizeCommand, shouldSkipCommand } from '../import/normalizer.ts';
 import { getRecentNormalizedCommands } from '../db/commands.ts';
 import { colors, formatHeader, getIcons, createSpinner } from '../ui/index.ts';
 
@@ -20,6 +21,27 @@ const ImportFlagsSchema = z.object({
 export interface ImportFlags {
   file?: string;
   format?: string;
+}
+
+/**
+ * Validate and sanitize file path to prevent path traversal attacks.
+ * Resolves the path relative to current working directory and ensures it's normalized.
+ */
+function validateFilePath(filePath: string): string {
+  const resolved = resolve(filePath);
+  const normalizedPath = normalize(resolved);
+  
+  // Check for obvious path traversal patterns that could be malicious
+  // Allow absolute paths and tilde expansion, but reject relative paths with ..
+  if (filePath.includes('..') && !filePath.startsWith('/') && !filePath.startsWith('~')) {
+    // Check if the resolved path actually escapes the current directory
+    const cwd = process.cwd();
+    if (!normalizedPath.startsWith(cwd)) {
+      throw new Error('Path traversal detected: file path must be within current directory or subdirectories');
+    }
+  }
+  
+  return normalizedPath;
 }
 
 export function handleImport(flags: ImportFlags): void {
@@ -40,8 +62,17 @@ export function handleImport(flags: ImportFlags): void {
 
   const { file: filePath, format: explicitFormat } = validated.data;
 
-  if (!existsSync(filePath)) {
-    console.log(colors.error(`File not found: ${filePath}`));
+  let validatedFilePath: string;
+  try {
+    validatedFilePath = validateFilePath(filePath);
+  } catch (err) {
+    console.log(colors.error('Invalid file path'));
+    console.log(colors.dim(`  ${err instanceof Error ? err.message : 'Unknown error'}`));
+    process.exit(1);
+  }
+
+  if (!existsSync(validatedFilePath)) {
+    console.log(colors.error(`File not found: ${validatedFilePath}`));
     process.exit(1);
   }
 
@@ -49,19 +80,19 @@ export function handleImport(flags: ImportFlags): void {
   console.log('');
 
   // Detect format based on file extension or content
-  const detectedFormat = detectFormat(filePath, explicitFormat);
+  const detectedFormat = detectFormat(validatedFilePath, explicitFormat);
 
   if (detectedFormat === 'recall-json') {
     const spinner = createSpinner('Importing Recall JSON...');
-    importRecallJSON(filePath);
+    importRecallJSON(validatedFilePath);
     spinner.succeed('Import complete');
   } else if (detectedFormat === 'zsh-history') {
     const spinner = createSpinner('Importing zsh history...');
-    importShellHistory(filePath, 'zsh');
+    importShellHistory(validatedFilePath, 'zsh');
     spinner.succeed('Import complete');
   } else if (detectedFormat === 'bash-history') {
     const spinner = createSpinner('Importing bash history...');
-    importShellHistory(filePath, 'bash');
+    importShellHistory(validatedFilePath, 'bash');
     spinner.succeed('Import complete');
   } else {
     console.log(colors.error('Unknown file format'));
@@ -119,7 +150,7 @@ function importRecallJSON(filePath: string): void {
     if (Array.isArray(data.commands)) {
       for (const cmd of data.commands) {
         if (shouldSkipCommand(cmd.raw_command)) continue;
-        const normalized = normalize(cmd.raw_command);
+        const normalized = normalizeCommand(cmd.raw_command);
         if (!normalized) continue;
 
         // Skip if already exists (simple dedup)
@@ -191,7 +222,7 @@ function importShellHistory(filePath: string, shell: 'zsh' | 'bash'): void {
 
     for (const cmd of parsed) {
       if (shouldSkipCommand(cmd.command)) continue;
-      const normalized = normalize(cmd.command);
+      const normalized = normalizeCommand(cmd.command);
       if (!normalized) continue;
 
       // Skip if already exists

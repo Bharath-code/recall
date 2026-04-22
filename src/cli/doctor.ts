@@ -12,7 +12,14 @@ import { getErrorCount, getFixedErrorCount } from '../db/errors.ts';
 import { detectShell, getShellRcPath, isHookInstalledAsync } from '../hooks/detect.ts';
 import { resolveAIConfig } from '../ai/adapter.ts';
 import { isCaptureEnabled, shouldRedactSecrets, getIgnoredPatterns } from '../config/index.ts';
-import { colors, formatHeader, getIcons } from '../ui/index.ts';
+import { 
+  colors, 
+  formatHeader, 
+  getIcons, 
+  SPACING,
+  formatSection,
+  formatKeyValueTable,
+} from '../ui/index.ts';
 
 export async function handleDoctor(): Promise<void> {
   const icons = getIcons();
@@ -22,6 +29,7 @@ export async function handleDoctor(): Promise<void> {
   console.log('');
 
   // Check 1: Binary in PATH
+  console.log(formatSection('Installation'));
   let binaryFound = false;
   let binaryPath = '';
   try {
@@ -52,8 +60,9 @@ export async function handleDoctor(): Promise<void> {
   if (!dirExists) issues++;
 
   // Check 4: Shell hook
+  console.log(formatSection('Shell Integration'));
   const shell = detectShell();
-  console.log(`  ${icons.cmd} Shell: ${shell}`);
+  console.log(`${SPACING.indent}${icons.cmd} Shell: ${shell}`);
 
   if (shell !== 'unknown') {
     const rcPath = getShellRcPath(shell);
@@ -63,13 +72,12 @@ export async function handleDoctor(): Promise<void> {
       if (!hookInstalled) issues++;
     }
   } else {
-    console.log(`  ${icons.warn} ${colors.warning('Unknown shell — cannot check hook')}`);
+    console.log(`${SPACING.indent}${icons.warn} ${colors.warning('Unknown shell — cannot check hook')}`);
     issues++;
   }
 
   // Check 5: Data stats
-  console.log('');
-  console.log(colors.dim('  Statistics:'));
+  console.log(formatSection('Statistics'));
   try {
     const cmdCount = getCommandCount();
     const repoCount = getRepoCount();
@@ -77,61 +85,66 @@ export async function handleDoctor(): Promise<void> {
     const errorCount = getErrorCount();
     const fixedCount = getFixedErrorCount();
 
-    console.log(`    Commands:  ${cmdCount}`);
-    console.log(`    Repos:     ${repoCount}`);
-    console.log(`    Tools:     ${toolCount}`);
-    console.log(`    Errors:    ${errorCount} (${fixedCount} fixed)`);
+    const stats = formatKeyValueTable({
+      'Commands': String(cmdCount),
+      'Repos': String(repoCount),
+      'Tools': String(toolCount),
+      'Errors': `${errorCount} (${fixedCount} fixed)`,
+    }, 1);
+    for (const line of stats) {
+      console.log(line);
+    }
   } catch {
-    console.log(colors.dim('    Unable to read database stats'));
+    console.log(colors.textDim(`${SPACING.indent}Unable to read database stats`));
     issues++;
   }
 
   // Check 6: AI provider
-  console.log('');
+  console.log(formatSection('AI Configuration'));
   const aiConfig = resolveAIConfig();
-  console.log(colors.dim(`  AI provider: ${aiConfig.provider}`));
+  console.log(colors.textDim(`${SPACING.indent}AI provider: ${aiConfig.provider}`));
   if (aiConfig.provider === 'openai' || aiConfig.provider === 'openrouter') {
-    console.log(colors.dim(`  API key: ${aiConfig.apiKey ? '••••' + aiConfig.apiKey.slice(-4) : 'not set'}`));
+    console.log(colors.textDim(`${SPACING.indent}API key: ${aiConfig.apiKey ? '••••' + aiConfig.apiKey.slice(-4) : 'not set'}`));
   }
 
   // Check 7: Privacy settings
-  console.log('');
-  console.log(colors.dim('  Privacy settings:'));
+  console.log(formatSection('Privacy Settings'));
   const captureEnabled = isCaptureEnabled();
   logCheck(`Capture enabled`, captureEnabled);
   if (!captureEnabled) {
-    console.log(colors.dim('    Run \'recall resume\' to enable capture'));
+    console.log(colors.textDim(`${SPACING.indent}${SPACING.indent}Run 'recall resume' to enable capture`));
   }
 
   const redactSecrets = shouldRedactSecrets();
   logCheck(`Secret redaction`, redactSecrets);
   if (!redactSecrets) {
-    console.log(colors.dim('    Warning: Secrets may be stored in plain text'));
+    console.log(colors.textDim(`${SPACING.indent}${SPACING.indent}Warning: Secrets may be stored in plain text`));
     issues++;
   }
 
   const ignoredPatterns = getIgnoredPatterns();
   if (ignoredPatterns.length > 0) {
-    console.log(`  ${icons.cmd} Ignored patterns (${ignoredPatterns.length}):`);
+    console.log(`${SPACING.indent}${icons.cmd} Ignored patterns (${ignoredPatterns.length}):`);
     for (const pattern of ignoredPatterns) {
-      console.log(`    ${colors.dim(pattern)}`);
+      console.log(`${SPACING.indent}${SPACING.indent}${colors.textDim(pattern)}`);
     }
   } else {
-    console.log(`  ${icons.cmd} No ignored patterns`);
+    console.log(`${SPACING.indent}${icons.cmd} No ignored patterns`);
   }
 
   // Summary
   console.log('');
+  console.log(formatSection('Summary'));
   if (issues === 0) {
-    console.log(`  ${icons.check} ${colors.success('All checks passed. Recall is healthy.')}`);
+    console.log(`${SPACING.indent}${icons.check} ${colors.success('All checks passed. Recall is healthy.')}`);
   } else {
-    console.log(`  ${icons.warn} ${colors.warning(`${issues} issue(s) found.`)}`);
-    console.log(colors.dim('  Run \'recall init\' to fix common issues.'));
+    console.log(`${SPACING.indent}${icons.warn} ${colors.warning(`${issues} issue(s) found.`)}`);
+    console.log(colors.textDim(`${SPACING.indent}${SPACING.indent}Run 'recall init' to fix common issues.`));
   }
   console.log('');
 }
 
 function logCheck(label: string, ok: boolean): void {
   const icons = getIcons();
-  console.log(`  ${ok ? icons.check : icons.cross} ${ok ? colors.success(label) : colors.error(label)}`);
+  console.log(`${SPACING.indent}${ok ? icons.check : icons.cross} ${ok ? colors.success(label) : colors.error(label)}`);
 }
