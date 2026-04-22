@@ -82,7 +82,7 @@ async function withRateLimit<T>(
       } catch (err) {
         attempt++;
         if (attempt >= maxRetries) throw err;
-        
+
         // Exponential backoff
         const delay = Math.pow(2, attempt) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -174,6 +174,80 @@ async function openAICompatEmbedder(
   const { createOpenAI } = await import('@ai-sdk/openai');
   const client = createOpenAI({ apiKey, baseURL, headers: extraHeaders });
   return new SDKEmbedder(name, client.embedding(model));
+}
+
+// ─── Provider-specific factories ──────────────────────────────────────────────
+
+async function createCustomEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  return openAICompatEmbedder(
+    'custom',
+    config.embeddingModel ?? 'text-embedding-3-small',
+    config.baseUrl!,
+    config.apiKey ?? 'no-key',
+  );
+}
+
+async function createOpenRouterEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  return openAICompatEmbedder(
+    'openrouter',
+    config.embeddingModel ?? 'openai/text-embedding-3-small',
+    'https://openrouter.ai/api/v1',
+    config.apiKey ?? '',
+    { 'HTTP-Referer': 'https://github.com/recall-cli', 'X-Title': 'Recall CLI' },
+  );
+}
+
+async function createOpenAIEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  return openAICompatEmbedder(
+    'openai',
+    config.embeddingModel ?? 'text-embedding-3-small',
+    config.baseUrl ?? 'https://api.openai.com/v1',
+    config.apiKey ?? '',
+  );
+}
+
+async function createOllamaEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  return openAICompatEmbedder(
+    'ollama',
+    config.embeddingModel ?? 'nomic-embed-text',
+    `${config.baseUrl ?? 'http://localhost:11434'}/v1`,
+    'ollama',
+  );
+}
+
+async function createGoogleEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  const { google, createGoogleGenerativeAI } = await import('@ai-sdk/google');
+  const client = config.apiKey ? createGoogleGenerativeAI({ apiKey: config.apiKey }) : google;
+  return new SDKEmbedder('google', client.textEmbeddingModel(config.embeddingModel ?? 'text-embedding-004'));
+}
+
+async function createCohereEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  const { cohere, createCohere } = await import('@ai-sdk/cohere');
+  const client = config.apiKey ? createCohere({ apiKey: config.apiKey }) : cohere;
+  return new SDKEmbedder('cohere', client.embedding(config.embeddingModel ?? 'embed-english-v3.0'));
+}
+
+interface AzureModule {
+  createAzure: (opts: { resourceName: string }) => {
+    embedding: (model: string) => EmbeddingModel;
+  };
+}
+
+async function createAzureEmbedder(config: AIConfig): Promise<SDKEmbedder> {
+  try {
+    const mod = '@ai-sdk/azure';
+    // @ts-ignore — optional peer dependency
+    const azureMod = await import(mod) as AzureModule;
+    const client = azureMod.createAzure({ resourceName: process.env.RECALL_AZURE_RESOURCE_NAME! });
+    return new SDKEmbedder('azure', client.embedding(config.embeddingModel ?? 'text-embedding-3-small'));
+  } catch {
+    throw new Error('Run: bun add @ai-sdk/azure');
+  }
+}
+
+async function createLocalEmbedder(): Promise<RecallEmbedder> {
+  const { LocalEmbedder } = await import('./local-embedder');
+  return new LocalEmbedder();
 }
 
 // ─── Configuration Validation ──────────────────────────────────────────────────
@@ -325,83 +399,16 @@ export async function createEmbedder(config?: AIConfig): Promise<RecallEmbedder>
 
   try {
     switch (c.provider) {
-      // ── Universal OpenAI-compat (custom baseUrl) ──────────────────────────
-      case 'custom':
-        return openAICompatEmbedder(
-          'custom',
-          c.embeddingModel ?? 'text-embedding-3-small',
-          c.baseUrl!,
-          c.apiKey ?? 'no-key',
-        );
-
-      // ── OpenRouter ────────────────────────────────────────────────────────
-      // Routes to underlying provider. Use openai/* models for embeddings.
-      case 'openrouter':
-        return openAICompatEmbedder(
-          'openrouter',
-          c.embeddingModel ?? 'openai/text-embedding-3-small',
-          'https://openrouter.ai/api/v1',
-          c.apiKey ?? '',
-          { 'HTTP-Referer': 'https://github.com/recall-cli', 'X-Title': 'Recall CLI' },
-        );
-
-      // ── OpenAI direct ─────────────────────────────────────────────────────
-      case 'openai':
-        return openAICompatEmbedder(
-          'openai',
-          c.embeddingModel ?? 'text-embedding-3-small',
-          c.baseUrl ?? 'https://api.openai.com/v1',
-          c.apiKey ?? '',
-        );
-
-      // ── Ollama (local server) ─────────────────────────────────────────────
-      // For Gemma/Llama on Ollama: use nomic-embed-text or mxbai-embed-large
-      // (chat models don't expose embeddings endpoints)
-      case 'ollama':
-        return openAICompatEmbedder(
-          'ollama',
-          c.embeddingModel ?? 'nomic-embed-text',
-          `${c.baseUrl ?? 'http://localhost:11434'}/v1`,
-          'ollama',
-        );
-
-      // ── Google (own SDK — not OpenAI-compat) ──────────────────────────────
-      case 'google': {
-        const { google, createGoogleGenerativeAI } = await import('@ai-sdk/google');
-        const client = c.apiKey ? createGoogleGenerativeAI({ apiKey: c.apiKey }) : google;
-        return new SDKEmbedder('google', client.textEmbeddingModel(c.embeddingModel ?? 'text-embedding-004'));
-      }
-
-      // ── Cohere (own SDK) ──────────────────────────────────────────────────
-      case 'cohere': {
-        const { cohere, createCohere } = await import('@ai-sdk/cohere');
-        const client = c.apiKey ? createCohere({ apiKey: c.apiKey }) : cohere;
-        return new SDKEmbedder('cohere', client.embedding(c.embeddingModel ?? 'embed-english-v3.0'));
-      }
-
-      // ── Azure OpenAI ──────────────────────────────────────────────────────
-      case 'azure': {
-        let azureMod: any = null;
-        try {
-          const mod = '@ai-sdk/azure';
-          // @ts-ignore — optional peer dependency
-          azureMod = await import(mod);
-        } catch {
-          throw new Error('Run: bun add @ai-sdk/azure');
-        }
-        const client = azureMod.createAzure({ resourceName: process.env.RECALL_AZURE_RESOURCE_NAME! });
-        return new SDKEmbedder('azure', client.embedding(c.embeddingModel ?? 'text-embedding-3-small'));
-      }
-
-      // ── Local ONNX (in-process, no server) ───────────────────────────────
-      case 'local': {
-        const { LocalEmbedder } = await import('./local-embedder');
-        return new LocalEmbedder();
-      }
-
+      case 'custom':   return createCustomEmbedder(c);
+      case 'openrouter': return createOpenRouterEmbedder(c);
+      case 'openai':   return createOpenAIEmbedder(c);
+      case 'ollama':   return createOllamaEmbedder(c);
+      case 'google':   return createGoogleEmbedder(c);
+      case 'cohere':   return createCohereEmbedder(c);
+      case 'azure':    return createAzureEmbedder(c);
+      case 'local':    return createLocalEmbedder();
       case 'none':
-      default:
-        return new NoopEmbedder();
+      default:         return new NoopEmbedder();
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

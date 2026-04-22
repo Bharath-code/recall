@@ -1,9 +1,10 @@
 import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import embeddedSchemaPath from './schema.sql' with { type: 'file' };
 
-const RECALL_DIR = join(process.env.HOME ?? '~', '.recall');
+const RECALL_DIR = join(process.env.HOME ?? homedir(), '.recall');
 const DB_PATH = join(RECALL_DIR, 'recall.db');
 const SCHEMA_PATH = embeddedSchemaPath;
 
@@ -125,6 +126,11 @@ export function closeDb(): void {
     _db.close();
     _db = null;
   }
+}
+
+// For testing — override the singleton with an in-memory DB
+export function setDb(db: Database): void {
+  _db = db;
 }
 
 // For testing — use in-memory database

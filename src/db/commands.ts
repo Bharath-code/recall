@@ -1,4 +1,5 @@
 import { type Database } from 'bun:sqlite';
+import { z } from 'zod';
 import { getDb } from './index.ts';
 
 export interface Command {
@@ -16,17 +17,23 @@ export interface Command {
   created_at: string;
 }
 
+const CommandSchema = z.object({
+  id: z.number(),
+  raw_command: z.string(),
+  normalized_command: z.string(),
+  cwd: z.string(),
+  repo_path_hash: z.string().nullable(),
+  exit_code: z.number().nullable(),
+  duration_ms: z.number().nullable(),
+  shell: z.string(),
+  stderr_output: z.string().nullable(),
+  session_id: z.string().nullable(),
+  source: z.enum(['hook', 'import']),
+  created_at: z.string(),
+});
+
 function isCommand(obj: unknown): obj is Command {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'id' in obj &&
-    'raw_command' in obj &&
-    'normalized_command' in obj &&
-    'cwd' in obj &&
-    typeof (obj as Command).id === 'number' &&
-    typeof (obj as Command).raw_command === 'string'
-  );
+  return CommandSchema.safeParse(obj).success;
 }
 
 export interface InsertCommandInput {
@@ -40,6 +47,7 @@ export interface InsertCommandInput {
   stderr_output?: string | null;
   session_id?: string | null;
   source?: 'hook' | 'import';
+  created_at?: string;
 }
 
 export interface SearchOptions {
@@ -56,14 +64,22 @@ function db(): Database {
   return getDb();
 }
 
-export function insertCommand(input: InsertCommandInput): number {
+function withDbCatch<T>(operation: string, fallback: T, fn: () => T): T {
   try {
-    const stmt = db().prepare(`
-      INSERT INTO commands (raw_command, normalized_command, cwd, repo_path_hash, exit_code, duration_ms, shell, stderr_output, session_id, source)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    return fn();
+  } catch (err) {
+    console.error(`Failed to ${operation}:`, err instanceof Error ? err.message : 'Unknown error');
+    return fallback;
+  }
+}
 
-    const result = stmt.run(
+export function insertCommand(input: InsertCommandInput): number {
+  return withDbCatch('insert command', 0, () => {
+    const columns = [
+      'raw_command', 'normalized_command', 'cwd', 'repo_path_hash',
+      'exit_code', 'duration_ms', 'shell', 'stderr_output', 'session_id', 'source',
+    ];
+    const values: (string | number | null)[] = [
       input.raw_command,
       input.normalized_command,
       input.cwd,
@@ -74,20 +90,28 @@ export function insertCommand(input: InsertCommandInput): number {
       input.stderr_output ?? null,
       input.session_id ?? null,
       input.source ?? 'hook',
-    );
+    ];
 
+    if (input.created_at) {
+      columns.push('created_at');
+      values.push(input.created_at);
+    }
+
+    const placeholders = columns.map(() => '?').join(', ');
+    const stmt = db().prepare(`
+      INSERT INTO commands (${columns.join(', ')}) VALUES (${placeholders})
+    `);
+
+    const result = stmt.run(...values);
     return Number(result.lastInsertRowid);
-  } catch (err) {
-    console.error('Failed to insert command:', err instanceof Error ? err.message : 'Unknown error');
-    return 0; // Return 0 to indicate failure without breaking shell hook
-  }
+  });
 }
 
 export function updateCommand(
   id: number,
   update: Partial<Pick<Command, 'exit_code' | 'duration_ms' | 'stderr_output'>>
 ): void {
-  try {
+  return withDbCatch('update command', undefined, () => {
     const sets: string[] = [];
     const values: (string | number | null)[] = [];
 
@@ -108,13 +132,11 @@ export function updateCommand(
 
     values.push(id);
     db().prepare(`UPDATE commands SET ${sets.join(', ')} WHERE id = ?`).run(...values);
-  } catch (err) {
-    console.error('Failed to update command:', err instanceof Error ? err.message : 'Unknown error');
-  }
+  });
 }
 
 export function searchCommands(opts: SearchOptions): Command[] {
-  try {
+  return withDbCatch('search commands', [], () => {
     const { query, repo_path_hash, limit = 20, offset = 0, since, failedOnly, includeImported } = opts;
 
     // Use FTS5 for fast full-text search
@@ -146,14 +168,11 @@ export function searchCommands(opts: SearchOptions): Command[] {
 
     const results = db().prepare(sql).all(...params);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to search commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function searchCommandsKeyword(query: string, limit: number = 20): Command[] {
-  try {
+  return withDbCatch('search commands by keyword', [], () => {
     // Fallback keyword search using LIKE (for when FTS fails or simple queries)
     const pattern = `%${query}%`;
     const results = db().prepare(`
@@ -163,30 +182,21 @@ export function searchCommandsKeyword(query: string, limit: number = 20): Comman
       LIMIT ?
     `).all(pattern, pattern, pattern, limit);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to search commands by keyword:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function deleteCommandById(id: number): boolean {
-  try {
+  return withDbCatch('delete command', false, () => {
     const result = db().prepare('DELETE FROM commands WHERE id = ?').run(id);
     return result.changes > 0;
-  } catch (err) {
-    console.error('Failed to delete command:', err instanceof Error ? err.message : 'Unknown error');
-    return false;
-  }
+  });
 }
 
 export function deleteAllCommands(): number {
-  try {
+  return withDbCatch('delete all commands', 0, () => {
     const result = db().prepare('DELETE FROM commands').run();
     return result.changes;
-  } catch (err) {
-    console.error('Failed to delete all commands:', err instanceof Error ? err.message : 'Unknown error');
-    return 0;
-  }
+  });
 }
 
 export function getRecentCommands(opts: {
@@ -194,7 +204,7 @@ export function getRecentCommands(opts: {
   repo_path_hash?: string;
   includeImported?: boolean;
 } = {}): Command[] {
-  try {
+  return withDbCatch('get recent commands', [], () => {
     const { limit = 20, repo_path_hash, includeImported } = opts;
     const sourceFilter = includeImported ? '' : "AND source = 'hook'";
 
@@ -215,14 +225,11 @@ export function getRecentCommands(opts: {
       LIMIT ?
     `).all(limit);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get recent commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getRecentNormalizedCommands(limit: number = 100): string[] {
-  try {
+  return withDbCatch('get recent normalized commands', [], () => {
     const rows = db().prepare(`
       SELECT normalized_command FROM commands
       ORDER BY created_at DESC
@@ -230,33 +237,25 @@ export function getRecentNormalizedCommands(limit: number = 100): string[] {
     `).all(limit) as { normalized_command: string }[];
 
     return rows.map(row => row.normalized_command);
-  } catch (err) {
-    console.error('Failed to get recent normalized commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getCommandById(id: number): Command | null {
-  try {
-    return db().prepare('SELECT * FROM commands WHERE id = ?').get(id) as Command | null;
-  } catch (err) {
-    console.error('Failed to get command by id:', err instanceof Error ? err.message : 'Unknown error');
-    return null;
-  }
+  return withDbCatch('get command by id', null, () => {
+    const result = db().prepare('SELECT * FROM commands WHERE id = ?').get(id);
+    return result && isCommand(result) ? result : null;
+  });
 }
 
 export function getCommandCount(): number {
-  try {
+  return withDbCatch('get command count', 0, () => {
     const row = db().prepare('SELECT COUNT(*) as count FROM commands').get() as { count: number };
     return row.count;
-  } catch (err) {
-    console.error('Failed to get command count:', err instanceof Error ? err.message : 'Unknown error');
-    return 0;
-  }
+  });
 }
 
 export function getFailedCommands(limit: number = 20): Command[] {
-  try {
+  return withDbCatch('get failed commands', [], () => {
     const results = db().prepare(`
       SELECT * FROM commands
       WHERE exit_code != 0 AND exit_code IS NOT NULL
@@ -264,38 +263,29 @@ export function getFailedCommands(limit: number = 20): Command[] {
       LIMIT ?
     `).all(limit);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get failed commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getCommandsBySession(sessionId: string): Command[] {
-  try {
+  return withDbCatch('get commands by session', [], () => {
     const results = db().prepare(`
       SELECT * FROM commands
       WHERE session_id = ?
       ORDER BY created_at ASC
     `).all(sessionId);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get commands by session:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getLastCommand(): Command | null {
-  try {
+  return withDbCatch('get last command', null, () => {
     const result = db().prepare('SELECT * FROM commands ORDER BY created_at DESC LIMIT 1').get();
     return result && isCommand(result) ? result : null;
-  } catch (err) {
-    console.error('Failed to get last command:', err instanceof Error ? err.message : 'Unknown error');
-    return null;
-  }
+  });
 }
 
 export function getTopCommands(limit: number = 10): { normalized_command: string; count: number }[] {
-  try {
+  return withDbCatch('get top commands', [], () => {
     return db().prepare(`
       SELECT normalized_command, COUNT(*) as count
       FROM commands
@@ -303,24 +293,18 @@ export function getTopCommands(limit: number = 10): { normalized_command: string
       ORDER BY count DESC
       LIMIT ?
     `).all(limit) as { normalized_command: string; count: number }[];
-  } catch (err) {
-    console.error('Failed to get top commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getAllCommands(): Command[] {
-  try {
+  return withDbCatch('get all commands', [], () => {
     const results = db().prepare('SELECT * FROM commands ORDER BY created_at DESC').all();
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get all commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getCommandsByRepo(repoPathHash: string, limit: number = 100): Command[] {
-  try {
+  return withDbCatch('get commands by repo', [], () => {
     const results = db().prepare(`
       SELECT * FROM commands
       WHERE repo_path_hash = ? AND source = 'hook'
@@ -328,14 +312,11 @@ export function getCommandsByRepo(repoPathHash: string, limit: number = 100): Co
       LIMIT ?
     `).all(repoPathHash, limit);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get commands by repo:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getSessionsByRepo(repoPathHash: string): { session_id: string; created_at: string }[] {
-  try {
+  return withDbCatch('get sessions by repo', [], () => {
     return db().prepare(`
       SELECT DISTINCT session_id, MIN(created_at) as created_at
       FROM commands
@@ -343,14 +324,11 @@ export function getSessionsByRepo(repoPathHash: string): { session_id: string; c
       GROUP BY session_id
       ORDER BY created_at DESC
     `).all(repoPathHash) as { session_id: string; created_at: string }[];
-  } catch (err) {
-    console.error('Failed to get sessions by repo:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getStartupCommands(repoPathHash: string, limit: number = 5): Command[] {
-  try {
+  return withDbCatch('get startup commands', [], () => {
     // Single query to get first N commands from each session using ROW_NUMBER
     const commands = db().prepare(`
       WITH ranked_commands AS (
@@ -384,14 +362,11 @@ export function getStartupCommands(repoPathHash: string, limit: number = 5): Com
       .sort((a, b) => b.count - a.count)
       .slice(0, limit)
       .map(item => item.command);
-  } catch (err) {
-    console.error('Failed to get startup commands:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getSuccessfulCommandsByRepo(repoPathHash: string, limit: number = 20): Command[] {
-  try {
+  return withDbCatch('get successful commands by repo', [], () => {
     const results = db().prepare(`
       SELECT * FROM commands
       WHERE repo_path_hash = ? AND exit_code = 0 AND source = 'hook'
@@ -399,14 +374,11 @@ export function getSuccessfulCommandsByRepo(repoPathHash: string, limit: number 
       LIMIT ?
     `).all(repoPathHash, limit);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get successful commands by repo:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }
 
 export function getFailedCommandsByRepo(repoPathHash: string, limit: number = 10): Command[] {
-  try {
+  return withDbCatch('get failed commands by repo', [], () => {
     const results = db().prepare(`
       SELECT * FROM commands
       WHERE repo_path_hash = ? AND exit_code != 0 AND exit_code IS NOT NULL AND source = 'hook'
@@ -414,8 +386,5 @@ export function getFailedCommandsByRepo(repoPathHash: string, limit: number = 10
       LIMIT ?
     `).all(repoPathHash, limit);
     return results.filter(isCommand) as Command[];
-  } catch (err) {
-    console.error('Failed to get failed commands by repo:', err instanceof Error ? err.message : 'Unknown error');
-    return [];
-  }
+  });
 }

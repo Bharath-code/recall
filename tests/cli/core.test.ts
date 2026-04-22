@@ -113,7 +113,7 @@ describe('core CLI dogfood flows', () => {
     expect(search.stdout).toContain('bun test');
 
     const project = await runRecall(['project', '--no-icons'], { cwd: projectDir });
-    expect(project.stdout).toContain('sample-project');
+    expect(project.stdout).toContain('(git repo)');
     expect(project.stdout).toContain('bun test');
   }, 15000);
 
@@ -187,7 +187,7 @@ describe('core CLI dogfood flows', () => {
 
     await runRecall(['delete', '--all', '--yes', '--no-icons']);
     recent = await runRecall(['recent', '--no-icons']);
-    expect(recent.stdout).toContain('No live captured commands yet');
+    expect(recent.stdout).toContain('No commands found');
   }, 15000);
 
   test('search remains fast with ten thousand commands', async () => {

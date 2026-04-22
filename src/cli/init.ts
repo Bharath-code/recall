@@ -3,6 +3,7 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { detectShell, getShellRcPath, appendHookToRc, isHookInstalledAsync } from '../hooks/detect.ts';
 import { generateZshSnippet, ZSH_EVAL_LINE } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet, BASH_EVAL_LINE } from '../hooks/bash-snippet.ts';
@@ -111,7 +112,7 @@ export async function handleInit(flags: InitFlags): Promise<void> {
               ? new Date(cmd.timestamp * 1000).toISOString()
               : new Date().toISOString();
 
-            insertStmt.run(cmd.command, normalized, process.env.HOME ?? '~', currentShell, timestamp);
+            insertStmt.run(cmd.command, normalized, process.env.HOME ?? homedir(), currentShell, timestamp);
             imported++;
           }
         });

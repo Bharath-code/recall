@@ -24,12 +24,16 @@ if (!config.show_icons) {
   setIconsEnabled(false);
 }
 
+function applyIconSetting(flags: Record<string, unknown>): void {
+  if (flags.noIcons) setIconsEnabled(false);
+}
+
 // ─── recall init ─────────────────────────────────────
 cli
   .command('init', 'Set up Recall on your system')
   .option('--auto', 'Auto-install shell hooks without prompting')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleInit } = await import('./cli/init.ts');
     await handleInit(flags);
   });
@@ -42,7 +46,7 @@ cli
   .option('--limit <n>', 'Max results', { default: 20 })
   .option('--failed-only', 'Show only failed commands')
   .action(async (query, flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleSearch } = await import('./cli/search.ts');
     handleSearch(query, flags);
   });
@@ -54,7 +58,7 @@ cli
   .option('--repo <hash>', 'Filter by repo')
   .option('--all', 'Include imported shell history')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleRecent } = await import('./cli/recent.ts');
     handleRecent(flags);
   });
@@ -63,7 +67,7 @@ cli
 cli
   .command('project', 'Show current project context')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleProject } = await import('./cli/project.ts');
     await handleProject();
   });
@@ -72,7 +76,7 @@ cli
 cli
   .command('doctor', 'Diagnose installation health')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleDoctor } = await import('./cli/doctor.ts');
     await handleDoctor();
   });
@@ -85,7 +89,7 @@ cli
   .option('--list', 'List all config values')
   .option('--reset', 'Reset config to defaults')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleConfig } = await import('./cli/config.ts');
     handleConfig(flags);
   });
@@ -94,7 +98,7 @@ cli
 cli
   .command('ignore <action> [pattern]', 'Manage command capture ignore patterns')
   .action(async (action, pattern, flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleIgnore } = await import('./cli/ignore.ts');
     handleIgnore(action, pattern);
   });
@@ -106,7 +110,7 @@ cli
   .option('--all', 'Delete all captured commands')
   .option('--yes', 'Confirm destructive delete')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleDelete } = await import('./cli/delete.ts');
     handleDelete(flags);
   });
@@ -116,7 +120,7 @@ cli
   .command('uninstall', 'Remove Recall from your system')
   .option('--keep-data', 'Keep your command history data')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleUninstall } = await import('./cli/uninstall.ts');
     await handleUninstall(flags);
   });
@@ -127,7 +131,7 @@ cli
   .option('--format <format>', 'Export format (json only)', { default: 'json' })
   .option('--output <path>', 'Output file path', { default: 'recall-export.json' })
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleExport } = await import('./cli/export.ts');
     handleExport(flags);
   });
@@ -138,7 +142,7 @@ cli
   .option('--file <path>', 'File to import')
   .option('--format <format>', 'Format (json, zsh, bash)')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleImport } = await import('./cli/import.ts');
     handleImport(flags);
   });
@@ -150,7 +154,7 @@ cli
   .option('--failed-only', 'Show only failed commands')
   .option('--query <query>', 'Search query')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handlePick } = await import('./cli/pick.ts');
     await handlePick(flags);
   });
@@ -159,7 +163,7 @@ cli
 cli
   .command('pause', 'Pause command capture')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handlePause } = await import('./cli/pause.ts');
     handlePause();
   });
@@ -168,7 +172,7 @@ cli
 cli
   .command('resume', 'Resume command capture')
   .action(async (flags) => {
-    if (flags.noIcons) setIconsEnabled(false);
+    applyIconSetting(flags);
     const { handleResume } = await import('./cli/resume.ts');
     handleResume();
   });
@@ -194,7 +198,7 @@ if (experimentalEnabled) {
   cli
     .command('ask <query>', 'Experimental: AI-powered semantic search')
     .action(async (query, flags) => {
-      if (flags.noIcons) setIconsEnabled(false);
+      applyIconSetting(flags);
       const { handleAsk } = await import('./cli/ask.ts');
       await handleAsk(query);
     });
@@ -203,7 +207,7 @@ if (experimentalEnabled) {
   cli
     .command('fix', 'Experimental: show known fixes for recent errors')
     .action(async (flags) => {
-      if (flags.noIcons) setIconsEnabled(false);
+      applyIconSetting(flags);
       const { handleFix } = await import('./cli/fix.ts');
       handleFix();
     });
@@ -214,7 +218,7 @@ if (experimentalEnabled) {
     .option('--dry-run', 'Preview without executing')
     .option('--skip <n>', 'Skip first N commands')
     .action(async (flags) => {
-      if (flags.noIcons) setIconsEnabled(false);
+      applyIconSetting(flags);
       const { handleReplay } = await import('./cli/replay.ts');
       await handleReplay(flags);
     });
@@ -223,7 +227,7 @@ if (experimentalEnabled) {
   cli
     .command('forgotten-tools', 'Experimental: show installed but unused tools')
     .action(async (flags) => {
-      if (flags.noIcons) setIconsEnabled(false);
+      applyIconSetting(flags);
       const { handleForgottenTools } = await import('./cli/forgotten-tools.ts');
       handleForgottenTools();
     });

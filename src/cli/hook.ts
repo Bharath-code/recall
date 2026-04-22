@@ -65,64 +65,78 @@ export async function handleHookAction(
   }
 }
 
-export async function handleHookCapture(args: Record<string, string | undefined>): Promise<void> {
+type CaptureArgs = Record<string, string | undefined>;
+
+function parseCaptureArgs(args: CaptureArgs) {
+  return CaptureSchema.parse({
+    rawCommand: args['raw-command'] ?? args.rawCommand,
+    cwd: args.cwd,
+    shell: args.shell,
+    startTime: args['start-time'] ?? args.startTime,
+    sessionId: args['session-id'] ?? args.sessionId,
+    exitCode: args['exit-code'] ?? args.exitCode,
+    durationMs: args['duration-ms'] ?? args.durationMs,
+  });
+}
+
+function shouldRecordCommand(raw: string, normalized: string): boolean {
+  if (shouldSkipCommand(raw)) return false;
+  if (commandMatchesIgnoredPattern(raw)) return false;
+  if (!normalized) return false;
+  if (isDuplicate(normalized, getRecentNormalizedCommands(100))) return false;
+  return true;
+}
+
+function buildCommandPayload(
+  parsed: z.infer<typeof CaptureSchema>,
+  normalized: string,
+  repoCtx: Awaited<ReturnType<typeof getRepoContext>>,
+) {
+  return {
+    raw_command: redactSecretsFromCommand(parsed.rawCommand),
+    normalized_command: redactSecretsFromCommand(normalized),
+    cwd: parsed.cwd,
+    repo_path_hash: repoCtx?.hash ?? null,
+    shell: parsed.shell,
+    session_id: parsed.sessionId ?? null,
+    exit_code: parsed.exitCode ? parseInt(parsed.exitCode, 10) : null,
+    duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : null,
+  };
+}
+
+function persistCommand(
+  repoCtx: Awaited<ReturnType<typeof getRepoContext>>,
+  payload: ReturnType<typeof buildCommandPayload>,
+): number {
+  const database = getDb();
+  const transaction = database.transaction(() => {
+    if (repoCtx) {
+      upsertRepo({
+        repo_path_hash: repoCtx.hash,
+        repo_name: repoCtx.name,
+        repo_root: repoCtx.root,
+      });
+    }
+    return insertCommand(payload);
+  });
+  return transaction();
+}
+
+export async function handleHookCapture(args: CaptureArgs): Promise<void> {
   try {
     if (!isCaptureEnabled()) return;
 
-    const parsed = CaptureSchema.parse({
-      rawCommand: args['raw-command'] ?? args.rawCommand,
-      cwd: args.cwd,
-      shell: args.shell,
-      startTime: args['start-time'] ?? args.startTime,
-      sessionId: args['session-id'] ?? args.sessionId,
-      exitCode: args['exit-code'] ?? args.exitCode,
-      durationMs: args['duration-ms'] ?? args.durationMs,
-    });
-
-    if (shouldSkipCommand(parsed.rawCommand)) return;
-    if (commandMatchesIgnoredPattern(parsed.rawCommand)) return;
-
+    const parsed = parseCaptureArgs(args);
     const normalized = normalize(parsed.rawCommand);
-    if (!normalized) return;
-    if (isDuplicate(normalized, getRecentNormalizedCommands(100))) return;
+    if (!shouldRecordCommand(parsed.rawCommand, normalized)) return;
 
-    // Detect git repo context
     const repoCtx = await getRepoContext(parsed.cwd);
-    
-    // Wrap in transaction for atomicity
-    const db = getDb();
-    const transaction = db.transaction(() => {
-      if (repoCtx) {
-        upsertRepo({
-          repo_path_hash: repoCtx.hash,
-          repo_name: repoCtx.name,
-          repo_root: repoCtx.root,
-        });
-      }
+    const payload = buildCommandPayload(parsed, normalized, repoCtx);
+    const id = persistCommand(repoCtx, payload);
 
-      const id = insertCommand({
-        raw_command: redactSecretsFromCommand(parsed.rawCommand),
-        normalized_command: redactSecretsFromCommand(normalized),
-        cwd: parsed.cwd,
-        repo_path_hash: repoCtx?.hash ?? null,
-        shell: parsed.shell,
-        session_id: parsed.sessionId ?? null,
-        exit_code: parsed.exitCode ? parseInt(parsed.exitCode, 10) : null,
-        duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : null,
-      });
-
-      return id;
-    });
-
-    const id = transaction();
-
-    // Spawn background embedding generator only when explicitly enabled.
     if (shouldAutoEmbed()) spawnEmbedder();
-
-    // Output the command ID for the shell hook to use in update
     process.stdout.write(String(id));
   } catch (err) {
-    // Log to stderr for debugging while maintaining shell stability
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     process.stderr.write(`[recall] Hook capture failed: ${errorMsg}\n`);
   }

@@ -5,7 +5,7 @@
  * resolves RC file paths.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ZSH_HOOK_MARKER } from './zsh-snippet.ts';
 import { BASH_HOOK_MARKER } from './bash-snippet.ts';
@@ -52,7 +52,6 @@ export function isHookInstalled(rcPath: string): boolean {
   if (!existsSync(rcPath)) return false;
 
   try {
-    const { readFileSync } = require('node:fs') as typeof import('node:fs');
     const text = readFileSync(rcPath, 'utf-8');
     return text.includes(ZSH_HOOK_MARKER) || text.includes(BASH_HOOK_MARKER);
   } catch {
