@@ -2,14 +2,18 @@
 import Terminal from './Terminal.astro';
 
 const installLines = [
-  '# One line to start',
+  '# One line installer',
   'curl -fsSL https://recall.sh/install | bash',
   '',
-  '# Or with Homebrew',
-  'brew install recall-cli',
+  '# Or build from source (Bun 1.2+ required)',
+  'git clone https://github.com/bharath/recall-cli.git',
+  'cd recall-cli && bun install && bun run build',
   '',
-  '# Then',
+  '# Then initialize',
   'recall init',
+  '',
+  '# Import existing shell history',
+  'recall import --format zsh',
 ];
 ---
 
@@ -17,14 +21,30 @@ const installLines = [
   <div class="max-w-4xl mx-auto">
     <div class="text-center mb-12">
       <h2 class="text-3xl sm:text-4xl font-bold font-mono text-cloud mb-4 text-balance reveal">
-        Get started in seconds
+        Start remembering in 30 seconds
       </h2>
-      <p class="text-dust text-lg text-pretty reveal">
-        One command. No dependencies. Local-first.
+      <p class="text-dust text-lg text-pretty reveal max-w-2xl mx-auto">
+        One command to install. One command to initialize. Your existing shell history is imported automatically.
       </p>
     </div>
-    <div class="reveal">
+
+    <div class="reveal mb-12">
       <Terminal lines={installLines} />
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-6 text-center reveal">
+      <div class="p-4">
+        <div class="text-2xl font-bold font-mono text-cyan mb-2">30s</div>
+        <p class="text-dust text-sm">From install to first search</p>
+      </div>
+      <div class="p-4">
+        <div class="text-2xl font-bold font-mono text-cyan mb-2">0</div>
+        <p class="text-dust text-sm">Accounts or cloud dependencies</p>
+      </div>
+      <div class="p-4">
+        <div class="text-2xl font-bold font-mono text-cyan mb-2">&lt;100ms</div>
+        <p class="text-dust text-sm">Average search response time</p>
+      </div>
     </div>
   </div>
 </section>

@@ -1,18 +1,53 @@
+---
+import EmailForm from './EmailForm.astro';
+---
+
 <section class="py-24 px-4 border-t border-slate/50">
   <div class="max-w-4xl mx-auto text-center">
-    <div class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate/30 border border-slate mb-6 reveal">
-      <span class="text-2xl">⚡</span>
-      <span class="text-cloud font-mono font-semibold">256 developers on early access</span>
+    <div class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-cyan/10 border border-cyan/20 mb-8 reveal">
+      <span class="text-cyan font-mono font-semibold text-sm">v0.1 — Early Access</span>
     </div>
-    <p class="text-dust text-lg mb-8 text-pretty reveal">
-      Join the waitlist for v0.1 launching April 2026
+
+    <h2 class="text-3xl sm:text-4xl font-bold font-mono text-cloud mb-6 text-balance reveal">
+      Your terminal deserves a memory
+    </h2>
+
+    <p class="text-dust text-lg mb-10 max-w-xl mx-auto text-pretty reveal">
+      Join the early access list. Get notified when v0.1 drops.
+      No account required to use Recall — ever.
     </p>
-    <a
-      href="https://github.com/bharath/recall-cli"
-      class="inline-flex items-center justify-center gap-2 px-6 py-3 min-h-10 rounded-xl bg-slate/30 border border-slate text-cyan font-mono text-sm hover:border-cyan hover:text-cloud transition-[transform,box-shadow,border-color] duration-200 active:scale-[0.96] will-change-transform reveal"
-    >
-      <span>GitHub</span>
-      <span>→</span>
-    </a>
+
+    <div class="flex justify-center mb-10 reveal">
+      <EmailForm />
+    </div>
+
+    <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-dust/70 font-mono reveal">
+      <span class="flex items-center gap-2">
+        <span class="text-mint">✓</span> macOS + zsh/bash
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="text-mint">✓</span> Local SQLite
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="text-mint">✓</span> Zero telemetry
+      </span>
+    </div>
+
+    <div class="mt-12 flex flex-wrap items-center justify-center gap-4 reveal">
+      <a
+        href="https://github.com/bharath/recall-cli"
+        class="inline-flex items-center justify-center gap-2 px-5 py-3 min-h-10 rounded-xl bg-slate/30 border border-slate text-cyan font-mono text-sm hover:border-cyan hover:text-cloud transition-all duration-200 active:scale-[0.96]"
+      >
+        <span>View on GitHub</span>
+        <span>→</span>
+      </a>
+      <a
+        href="https://twitter.com/recall_cli"
+        class="inline-flex items-center justify-center gap-2 px-5 py-3 min-h-10 rounded-xl bg-slate/30 border border-slate text-cyan font-mono text-sm hover:border-cyan hover:text-cloud transition-all duration-200 active:scale-[0.96]"
+      >
+        <span>Follow on Twitter</span>
+        <span>→</span>
+      </a>
+    </div>
   </div>
 </section>

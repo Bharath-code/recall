@@ -2,87 +2,155 @@
   <div class="max-w-6xl mx-auto">
     <div class="text-center mb-16">
       <h2 class="text-3xl sm:text-4xl font-bold font-mono text-cloud mb-4 text-balance reveal">
-        How it works
+        Everything your terminal should have built in
       </h2>
       <p class="text-dust text-lg max-w-2xl mx-auto text-pretty reveal">
-        Three simple steps to never forget a command again
+        20+ commands. One SQLite file. Zero network calls.
       </p>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-8 stagger-children">
-      <!-- Capture -->
-      <div class="group relative p-8 bg-slate/30 border border-slate rounded-2xl hover:border-cyan/50 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 reveal">
-        <!-- Glow overlay: concentric radius = outer (16px) + bleed (2px) = 18px -->
-        <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan to-mint rounded-[18px] opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none"></div>
-        <div class="relative">
-          <div class="w-12 h-12 mb-6 rounded-xl bg-cyan/10 flex items-center justify-center">
-            <span class="text-2xl">📝</span>
-          </div>
-          <h3 class="text-xl font-bold font-mono text-cyan mb-4">CAPTURE</h3>
-          <ul class="space-y-3 text-dust text-sm">
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>Install hook → every command stored</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>zsh precmd + bash PROMPT_COMMAND</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>Normalized, deduplicated, local</span>
-            </li>
-          </ul>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
+      <!-- Feature 1 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🔍</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Smart Search</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          <code class="text-cloud font-mono text-xs bg-slate/50 px-1.5 py-0.5 rounded">recall search "docker"</code> —
+          finds commands across repos, directories, and time. Sub-100ms.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">--repo</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">--since</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">--failed-only</span>
         </div>
       </div>
 
-      <!-- Search -->
-      <div class="group relative p-8 bg-slate/30 border border-slate rounded-2xl hover:border-cyan/50 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 reveal">
-        <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan to-mint rounded-[18px] opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none"></div>
-        <div class="relative">
-          <div class="w-12 h-12 mb-6 rounded-xl bg-cyan/10 flex items-center justify-center">
-            <span class="text-2xl">🔍</span>
-          </div>
-          <h3 class="text-xl font-bold font-mono text-cyan mb-4">SEARCH</h3>
-          <ul class="space-y-3 text-dust text-sm">
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>recall search "postgres"</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>recall recent --project api</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>recall project (git context)</span>
-            </li>
-          </ul>
+      <!-- Feature 2 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">📁</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Project Memory</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          <code class="text-cloud font-mono text-xs bg-slate/50 px-1.5 py-0.5 rounded">recall project</code> —
+          see startup patterns, recent commands, and "how we run this repo" at a glance.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">git-aware</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">cwd context</span>
         </div>
       </div>
 
-      <!-- Recall -->
-      <div class="group relative p-8 bg-slate/30 border border-slate rounded-2xl hover:border-cyan/50 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 reveal">
-        <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan to-mint rounded-[18px] opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none"></div>
-        <div class="relative">
-          <div class="w-12 h-12 mb-6 rounded-xl bg-cyan/10 flex items-center justify-center">
-            <span class="text-2xl">⚡</span>
-          </div>
-          <h3 class="text-xl font-bold font-mono text-cyan mb-4">RECALL</h3>
-          <ul class="space-y-3 text-dust text-sm">
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>Exactly what you ran, where, when</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>Exit code, duration, repo context</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-cyan mt-1">→</span>
-              <span>Instant search, sub-100ms</span>
-            </li>
-          </ul>
+      <!-- Feature 3 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">📜</div>
+          <h3 class="text-base font-bold font-mono text-cyan">History Import</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          Import your existing zsh/bash history on first run. Normalized, deduplicated, and enriched with context.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">zsh</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">bash</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">normalization</span>
+        </div>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">⚡</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Interactive Picker</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          <code class="text-cloud font-mono text-xs bg-slate/50 px-1.5 py-0.5 rounded">recall pick</code> —
+          fuzzy-find through commands and paste them back to your terminal. No mouse needed.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">fuzzy</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">instant</span>
+        </div>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🔒</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Privacy Controls</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          Pause capture anytime. Ignore sensitive patterns. Delete individual commands or wipe everything. You own your data.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">pause/resume</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">ignore patterns</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">selective delete</span>
+        </div>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">📦</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Export & Import</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          Backup your command history as JSON. Move it between machines. Import from shell history files anytime.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">JSON</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">portable</span>
+        </div>
+      </div>
+
+      <!-- Feature 7 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🤖</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Workflow Detection</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          <code class="text-cloud font-mono text-xs bg-slate/50 px-1.5 py-0.5 rounded">recall workflows</code> —
+          detects repeated command sequences you run together. Save and replay them as bundles.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">pattern detection</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">replay</span>
+        </div>
+      </div>
+
+      <!-- Feature 8 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">📊</div>
+          <h3 class="text-base font-bold font-mono text-cyan">Weekly Digest</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          <code class="text-cloud font-mono text-xs bg-slate/50 px-1.5 py-0.5 rounded">recall digest</code> —
+          a local summary of your terminal activity. See what you worked on, what failed, and what you ran most.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">local only</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">insights</span>
+        </div>
+      </div>
+
+      <!-- Feature 9 -->
+      <div class="group p-6 bg-slate/20 border border-slate rounded-2xl hover:border-cyan/40 transition-all duration-300 hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center text-lg">🧪</div>
+          <h3 class="text-base font-bold font-mono text-mint">Experimental AI</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          Semantic search with natural language. Error fixing from known patterns. Forgotten tool suggestions. All opt-in.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">semantic search</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">error fix</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">opt-in</span>
         </div>
       </div>
     </div>

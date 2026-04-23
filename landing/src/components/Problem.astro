@@ -1,14 +1,60 @@
 <section class="py-24 px-4 border-t border-slate/50">
-  <div class="max-w-4xl mx-auto text-center">
-    <div class="inline-block mb-6">
-      <span class="text-6xl">😤</span>
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl sm:text-4xl font-bold font-mono text-cloud mb-4 text-balance reveal">
+        Your shell history is a graveyard of lost context
+      </h2>
+      <p class="text-dust text-lg max-w-2xl mx-auto text-pretty reveal">
+        You ran the command. Your terminal forgot why.
+      </p>
     </div>
-    <h2 class="text-3xl sm:text-4xl font-bold font-mono text-cloud mb-4 leading-tight text-balance reveal">
-      Tried a command three weeks ago.<br />
-      Can't reproduce it. Won't happen again.
-    </h2>
-    <p class="text-xl text-dust max-w-2xl mx-auto text-pretty reveal">
-      Your shell recorded it. You just can't find it.
-    </p>
+
+    <div class="grid md:grid-cols-3 gap-6 stagger-children">
+      <!-- Pain 1 -->
+      <div class="p-8 bg-slate/20 border border-slate rounded-2xl reveal">
+        <div class="w-12 h-12 mb-6 rounded-xl bg-ember/10 flex items-center justify-center text-2xl">
+          🔍
+        </div>
+        <h3 class="text-lg font-bold font-mono text-cloud mb-3">Re-Googling commands you know</h3>
+        <p class="text-dust text-sm leading-relaxed">
+          "How did I set up that Postgres container again?" You ran it two weeks ago.
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">history | grep docker</code>
+          returns 400 lines of noise. No repo context. No directory. Good luck.
+        </p>
+      </div>
+
+      <!-- Pain 2 -->
+      <div class="p-8 bg-slate/20 border border-slate rounded-2xl reveal">
+        <div class="w-12 h-12 mb-6 rounded-xl bg-ember/10 flex items-center justify-center text-2xl">
+          🔄
+        </div>
+        <h3 class="text-lg font-bold font-mono text-cloud mb-3">Rebuilding project context every time</h3>
+        <p class="text-dust text-sm leading-relaxed">
+          Clone a repo you worked on last month. What's the first command?
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">npm install</code>? 
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">docker compose up</code>?
+          You waste 5 minutes remembering how to start the project.
+        </p>
+      </div>
+
+      <!-- Pain 3 -->
+      <div class="p-8 bg-slate/20 border border-slate rounded-2xl reveal">
+        <div class="w-12 h-12 mb-6 rounded-xl bg-ember/10 flex items-center justify-center text-2xl">
+          🧠
+        </div>
+        <h3 class="text-lg font-bold font-mono text-cloud mb-3">Forgetting tools you installed</h3>
+        <p class="text-dust text-sm leading-relaxed">
+          You brew-installed 
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">fd</code>, 
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">ripgrep</code>, 
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">fzf</code>...
+          then kept using 
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">find</code> 
+          and 
+          <code class="text-ember font-mono text-xs bg-ember/10 px-1.5 py-0.5 rounded">grep</code> 
+          out of habit. Your terminal knows what you have. You don't.
+        </p>
+      </div>
+    </div>
   </div>
 </section>

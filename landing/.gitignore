@@ -22,3 +22,12 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# cloudflare wrangler local state
+.wrangler/
+
+# vscode personal settings
+.vscode/
+
+# bun lockfile (optional — remove if you want deterministic installs)
+# bun.lock
