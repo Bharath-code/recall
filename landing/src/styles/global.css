@@ -5,15 +5,60 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  
+
   body {
     @apply bg-ink text-cloud;
+    text-wrap: pretty;
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Scroll-triggered reveal animation */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition-property: opacity, transform;
+    transition-duration: 0.6s;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger children delays */
+  .stagger-children > *:nth-child(1) { --stagger-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { --stagger-delay: 80ms; }
+  .stagger-children > *:nth-child(3) { --stagger-delay: 160ms; }
+  .stagger-children > *:nth-child(4) { --stagger-delay: 240ms; }
+  .stagger-children > *:nth-child(5) { --stagger-delay: 320ms; }
+  .stagger-children > *:nth-child(6) { --stagger-delay: 400ms; }
+
+  .stagger-children > .reveal {
+    transition-delay: var(--stagger-delay, 0ms);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

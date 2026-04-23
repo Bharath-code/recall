@@ -6,8 +6,8 @@ interface Props {
   description?: string;
 }
 
-const { 
-  title, 
+const {
+  title,
   description = "Your terminal remembers what you forget. Capture every command. Search instantly. Recall exactly what you ran, where, and when."
 } = Astro.props;
 ---
@@ -21,7 +21,7 @@ const {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title} - Recall</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,5 +29,21 @@ const {
   </head>
   <body class="bg-ink text-cloud font-sans antialiased">
     <slot />
+
+    <script>
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+      );
+
+      document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+    </script>
   </body>
 </html>

@@ -1,165 +1,101 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Compact guidance for OpenCode sessions working on Recall.
 
-## Project Overview
+## Project
 
-Recall is a local-first developer workflow memory assistant built with Bun + TypeScript. It captures shell commands, stores them in local SQLite, and helps developers recall past commands, rediscover forgotten tools, and automate repetitive workflows.
+Recall — local-first CLI that captures shell commands to SQLite so developers can search past work by repo/cwd/context.
 
-Core promise: "Your terminal remembers what you forget."
-
-## Project Status
-Recall is currently **pre-alpha**: this repo is the product + UX spec, architecture, and implementation plan (code is still evolving).
-
-## Tech Stack
-
-- **Runtime**: Bun
-- **Language**: TypeScript
-- **Database**: Bun SQLite (local)
-- **CLI Framework**: CAC (not Commander)
+- **Runtime**: Bun 1.2+
+- **CLI framework**: CAC (not Commander)
+- **DB**: Bun SQLite (`bun:sqlite`)
 - **Validation**: Zod
-- **Logging**: Pino
-- **Testing**: Bun test
-- **AI**: Vercel AI SDK (Phase 4+)
-- **Packaging**: `bun build --compile`
+- **Test runner**: `bun:test`
+- **Packaging**: `bun build --compile` + macOS ad-hoc signing
 
-## Project Structure
+## Monorepo boundaries
 
 ```
-src/
-├── cli/           # CAC commands, pure functions
-├── db/            # SQLite layer — no AI knowledge
-├── hooks/         # Shell capture, pure functions
-├── import/        # History import (TDD)
-├── repos/         # Git root detection
-├── tools/         # Tool scanner
-├── sync/          # SyncAdapter interface (Phase 5)
-├── ui/            # CLI design system (colors, icons, spinners)
-└── ai/            # AI layer (stub now, impl Phase 4)
+/               → CLI package (recall-cli)
+landing/        → Astro + Tailwind marketing site (workspace)
+src/            → CLI source
+scripts/        → Build helpers (macOS signing)
+tests/          → Bun test suites
+types/          → Ambient type declarations
 ```
 
-**Key principle:** Every AI feature has a "dumb fallback" CLI-only path. CLI always works without AI.
+- Run landing separately: `bun run landing:dev`, `bun run landing:build`
 
-## Key Decisions (Non-Negotiable)
+## Developer commands
 
-### Shell Hook Install
-- **Two-mode**: Default = print-only (Starship model), `--auto` flag for safe auto-append
-- **Idempotent detection**: Check if entry exists, skip if found (zinit pattern)
-- **NO backups**: Industry moved away from backup-then-modify
-
-### HISTFILE Handling
-- Respect `$HISTFILE` env var first
-- For zsh, also check `$ZDOTDIR`
-- Fallback chain: `~/.zsh_history` → `~/.zhistory` → `~/.histfile`
-
-### Command Normalization (in order)
-1. Trim leading/trailing whitespace
-2. Collapse multiple spaces to single
-3. Expand `~` to `$HOME`
-4. Case-sensitive exact match
-5. Skip commands starting with space (respects HISTCONTROL)
-6. Deduplicate against sliding window of last 100 commands
-
-### Sync Strategy
-- Phase 1-3: Local SQLite only
-- `src/sync/adapter.ts` interface now, swap later (Phase 5 options: Convex, CRDTs, ElectricSQL)
-- NO vendor lock-in until team features proven
-
-### Testing Strategy
-- **TDD for**: normalizer, history-parser, hook detect, git detector
-- **Integration tests for**: CLI commands
-- **Manual for**: shell hook behavior
-
-### CLI Design System
-- **Icons default ON**: `--no-icons` flag to disable (eza pattern)
-- **Respects `NO_COLOR`**: plain text fallback for CI/scripts
-- **Semantic colors**: cyan=paths, green=success, red=errors, dim=secondary
-- **ora spinners**: loading states for async ops
-- **Module**: `src/ui/` with colors.ts, icons.ts, spinner.ts, format.ts
-
-## Architecture
-
-```
-User Terminal → Shell Hook Layer → Recall Core Engine → Local SQLite
-                                                      ↓
-                        ┌────────────────────────────┴────────────────────────────┐
-                        ↓                                                     ↓
-                  CLI Query Layer                                        Digest/Insights
-                  recall search                                           weekly tips
-                  recall recent                                           workflow summary
-```
-
-### Core Modules
-
-1. **Shell Capture Module** - zsh preexec/precmd, bash PROMPT_COMMAND hooks
-2. **Parser** - command normalization, tool extraction
-3. **Tool Scanner** - brew/npm/cargo inventory
-4. **Workflow Engine** - repeated command chain detection
-5. **Suggestion Engine** - forgotten tools, repeated pain points
-6. **AI Layer** (Phase 4+) - natural language search, recommendations
-
-### Database Schema
-
-- **commands**: id, raw_command, normalized_command, cwd, repo_path_hash, exit_code, duration_ms, shell, created_at
-- **repos**: id, repo_path_hash, repo_name, repo_root, last_opened_at, startup_commands_json
-- **tools**: id, tool_name, source (brew/npm/cargo), installed_at, last_used_at, usage_count
-- **workflows**: id, sequence_json, project_id, frequency
-- **errors**: id, error_signature, command_id, fix_summary, created_at
-
-## Commands
-
-### Build & Run
 ```bash
 bun install
-bun run build     # compile CLI
-bun run dev       # development mode
-bun test          # run tests
-bun run lint     # typecheck (tsc --noEmit)
-bun run clean    # remove build output + node_modules
+bun run dev           # run src/index.ts directly
+bun run build         # compile to bin/recall + run scripts/sign-macos.sh
+bun test              # run all tests
+bun test tests/import/normalizer.test.ts   # single test file
+bun run lint          # tsc --noEmit only
+bun run clean         # rm -rf bin/ node_modules/
 ```
 
-### CLI Commands (all implemented)
-- `recall init` - onboarding wizard
-- `recall hook capture` - internal hook payload handler
-- `recall search <query>` - search past commands
-- `recall recent` - show recent commands
-- `recall project` - project memory context
-- `recall forgotten-tools` - surfacing unused tools
-- `recall uninstall` - clean removal
-- `recall doctor` - debug installation issues
+Build quirks:
+- `bun run build` runs `scripts/sign-macos.sh`, which calls `codesign` on macOS. On non-macOS it no-ops.
+- Compiled output goes to `bin/recall`.
 
-## Development Phases
+## TypeScript paths (tsconfig)
 
-1. **Phase 1 (Trust/Memory)**: Shell hooks, history capture, recall search
-2. **Phase 2 (Tool Rediscovery)**: Installed tool scanner, dormant tool detection, weekly digest
-3. **Phase 3 (Workflow Automation)**: Workflow detection, session restore
-4. **Phase 4 (AI Suggestions)**: Natural language recall, contextual help
-5. **Phase 5 (Team)**: Shared workflows, onboarding packs
+```
+@/*       → ./src/*
+@db/*     → ./src/db/*
+@cli/*    → ./src/cli/*
+@ui/*     → ./src/ui/*
+@hooks/*  → ./src/hooks/*
+@import/* → ./src/import/*
+@repos/*  → ./src/repos/*
+@tools/*  → ./src/tools/*
+@ai/*     → ./src/ai/*
+@errors/* → ./src/errors/*
+@workflows/* → ./src/workflows/*
+```
 
-## Key Principles
+## Testing patterns
 
-- Local-first, privacy-respecting
-- Invisible until valuable
-- Fast (<100ms for common queries)
-- No noisy interruptions
-- AI only when helpful (disabled by default)
-- Suggestion thresholds to prevent spam
+- Import from `bun:test`.
+- Database tests use in-memory SQLite via `createTestDb()` + `setDb()` from `src/db/index.ts`.
+- `beforeEach`/`afterEach` reset the DB singleton to avoid cross-test pollution.
+- Coverage is disabled in `bunfig.toml`.
 
-## Reference Documents
+## CLI entrypoint (`src/index.ts`)
 
-- **Full Plan**: `IMPLEMENTATION_PLAN.md` — task breakdown, wireframes, research
-- **Spec**: `SPEC.md` — implementation specification (source of truth)
-- **Brand Guide**: `BRANDING.md` — logo, colors, typography, voice, copy examples
-- **Marketing Plan**: `MARKETING_PLAN.md` — content strategy, launch plan, metrics
-- **Audience Building**: `AUDIENCE_BUILDING_PLAN.md` — pre-launch Twitter strategy
-- **Landing Page**: `LANDING_PAGE.md` — CRO-optimized design for email capture
-- **PRD**: `recall_prd_and_technical_implementation_plan.md` — vision, phases, tech rationale
-- **Architecture**: `architecture_high_level_UX_wireframe.md` — system design, user flows
+- Registers commands with CAC; lazy-loads handlers via dynamic `import()`.
+- Global `--no-icons` flag; respects `NO_COLOR`.
+- Experimental commands are hidden unless `RECALL_EXPERIMENTAL=1` is set:
+  - `ask`, `fix`, `replay`, `forgotten-tools`, `embed`
 
-## Important Notes
+## Key conventions
 
-- First deliverable: shell hook capture + search + project memory
-- Do not build TUI, dashboards, or cloud sync early
-- Focus on trust and reliability over flashy features
-- Bun.Glob NOT used — git root detection via `git rev-parse --show-toplevel`
-- Bun.secrets NOT used yet — Phase 4+ AI feature
+- **Every AI feature must have a dumb CLI-only fallback.** The CLI works without AI or network.
+- **Shell hook install is two-mode:** default prints the hook line (Starship model); `--auto` appends to shell rc with idempotent detection. No backups.
+- **HISTFILE handling:** respect `$HISTFILE`, then for zsh check `$ZDOTDIR`, then fall back `~/.zsh_history` → `~/.zhistory` → `~/.histfile`.
+- **Command normalization order:** trim → collapse whitespace (preserve quoted strings) → expand `~` to `$HOME` → case-sensitive. Skip commands starting with space (HISTCONTROL).
+- **Icons default ON:** `--no-icons` to disable; `NO_COLOR` disables colors.
+- **Semantic colors:** cyan=paths, green=success, red=errors, dim=secondary.
+
+## Database notes (`src/db/index.ts`)
+
+- Schema is loaded from `src/db/schema.sql` using `with { type: 'file' }` import attribute.
+- Runtime compatibility migrations exist (e.g., adding `source` column to commands, recreating `tools` table without restrictive CHECK constraint). These run automatically on `getDb()`.
+- `createTestDb()` sets up an in-memory instance with the same schema + migrations.
+- Data directory: `~/.recall/` (mode `0o700`).
+
+## What not to build early
+
+- No TUI, dashboards, or cloud sync in Phase 1.
+- AI features stay behind `RECALL_EXPERIMENTAL=1` until explicitly promoted.
+
+## Verified references
+
+- `README.md` — install from source, trust story, competitor comparison
+- `SPEC.md` — implementation spec (source of truth)
+- `src/db/schema.sql` — actual DB schema
+- `src/index.ts` — command registry and experimental gating

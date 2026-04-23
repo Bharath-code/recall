@@ -6,9 +6,9 @@ interface Props {
 const { lines } = Astro.props;
 ---
 
-<div class="bg-ink/80 backdrop-blur-sm border border-slate rounded-xl overflow-hidden shadow-2xl">
+<div class="bg-ink/80 backdrop-blur-sm rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.2),0_8px_32px_rgba(0,0,0,0.3)]">
   <!-- Terminal header -->
-  <div class="flex items-center gap-2 px-4 py-3 bg-slate/50 border-b border-slate">
+  <div class="flex items-center gap-2 px-4 py-3 bg-slate/50 border-b border-slate rounded-t-xl">
     <div class="flex gap-2">
       <div class="w-3 h-3 rounded-full bg-ember"></div>
       <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -18,7 +18,7 @@ const { lines } = Astro.props;
       <span class="text-xs text-dust font-mono">recall — zsh</span>
     </div>
   </div>
-  
+
   <!-- Terminal content -->
   <pre class="p-6 font-mono text-sm overflow-x-auto bg-gradient-to-br from-ink/90 to-terminal/90">
     {lines.map((line) => (

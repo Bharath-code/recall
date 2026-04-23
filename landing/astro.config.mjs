@@ -8,7 +8,9 @@ export default defineConfig({
   site: 'https://recall.sh',
   integrations: [tailwind()],
   output: 'server',
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    compatibilityDate: '2026-04-22',
+  }),
   vite: {
     build: {
       cssMinify: true,
