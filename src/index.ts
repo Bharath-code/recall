@@ -93,19 +93,21 @@ cli
   .option('--list', 'List all config values')
   .option('--reset', 'Reset config to defaults')
   .option('--json', 'Output as JSON')
+  .option('--interactive', 'Walk through settings interactively')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleConfig } = await import('./cli/config.ts');
-    handleConfig(flags);
+    await handleConfig(flags);
   });
 
 // ─── recall ignore ───────────────────────────────────
 cli
-  .command('ignore <action> [pattern]', 'Manage command capture ignore patterns')
+  .command('ignore [action] [pattern]', 'Manage command capture ignore patterns')
+  .option('--interactive', 'Manage patterns interactively')
   .action(async (action, pattern, flags) => {
     applyIconSetting(flags);
     const { handleIgnore } = await import('./cli/ignore.ts');
-    handleIgnore(action, pattern);
+    await handleIgnore(action, pattern, flags);
   });
 
 // ─── recall delete ───────────────────────────────────
@@ -114,10 +116,11 @@ cli
   .option('--id <id>', 'Delete one command by id')
   .option('--all', 'Delete all captured commands')
   .option('--yes', 'Confirm destructive delete')
+  .option('--interactive', 'Choose what to delete interactively')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleDelete } = await import('./cli/delete.ts');
-    handleDelete(flags);
+    await handleDelete(flags);
   });
 
 // ─── recall uninstall ────────────────────────────────
@@ -268,14 +271,21 @@ cli
     applyIconSetting(flags);
     const { handleSession } = await import('./cli/session.ts');
     handleSession(flags);
-  });
-
-// ─── recall mcp ────────────────────────────────────
+  });  // ─── recall mcp ────────────────────────────────────
 cli
   .command('mcp', 'Start MCP server for AI tool integration (Claude Code, Cursor)')
   .action(async () => {
     const { handleMcp } = await import('./cli/mcp.ts');
     await handleMcp();
+  });
+
+// ─── recall completions ───────────────────────────────
+cli
+  .command('completions <shell>', 'Generate shell completion scripts')
+  .action(async (shell, flags) => {
+    applyIconSetting(flags);
+    const { handleCompletions } = await import('./cli/completions.ts');
+    handleCompletions(shell);
   });
 
 if (experimentalEnabled) {

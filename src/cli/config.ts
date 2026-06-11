@@ -4,6 +4,7 @@
 
 import { loadConfig, updateConfig, resetConfig, type RecallConfig } from '../config/index.ts';
 import { colors, getIcons } from '../ui/index.ts';
+import * as prompts from '../ui/prompts.ts';
 import { outputJson } from '../ui/json-output.ts';
 
 const CONFIG_KEYS: (keyof RecallConfig)[] = [
@@ -25,14 +26,30 @@ export interface ConfigFlags {
   list?: boolean;
   reset?: boolean;
   json?: boolean;
+  interactive?: boolean;
 }
 
-export function handleConfig(flags: ConfigFlags): void {
+export async function handleConfig(flags: ConfigFlags): Promise<void> {
   const cfg = loadConfig();
   const icons = getIcons();
 
-  // --reset
+  // ─── Interactive wizard ──────────────────────────────────────────────────
+  if (flags.interactive) {
+    await runConfigWizard(icons);
+    return;
+  }
   if (flags.reset) {
+    if (prompts.isInteractive()) {
+      const confirmed = prompts.unwrap(await prompts.confirm({
+        message: 'Reset all settings to defaults?',
+        active: 'Yes, reset them',
+        inactive: 'No, keep my settings',
+      }));
+      if (!confirmed) {
+        prompts.log.info('Cancelled — settings were not changed.');
+        return;
+      }
+    }
     resetConfig();
     console.log(`  ${icons.check} ${colors.success('Config reset to defaults')}`);
     console.log('');
@@ -202,4 +219,107 @@ function getDefaultString(key: keyof RecallConfig): string {
     version: '1',
   };
   return defaults[key] ?? '';
+}
+
+/**
+ * Interactive wizard for recall config --interactive
+ */
+async function runConfigWizard(icons: ReturnType<typeof getIcons>): Promise<void> {
+  prompts.intro(`${icons.settings} ${colors.bold('Recall Settings')}`);
+
+  const action = prompts.unwrap(await prompts.select({
+    message: 'What would you like to do?',
+    options: [
+      { value: 'view', label: 'View a setting' },
+      { value: 'change', label: 'Change a setting' },
+      { value: 'reset', label: 'Reset all settings to defaults' },
+    ],
+  }));
+
+  if (action === 'view') {
+    const key = prompts.unwrap(await prompts.select({
+      message: 'Which setting?',
+      options: CONFIG_KEYS.map(k => ({
+        value: k,
+        label: k,
+        hint: String(loadConfig()[k] ?? 'null'),
+      })),
+    })) as keyof RecallConfig;
+
+    const cfg = loadConfig();
+    prompts.log.success(`${key}: ${String(cfg[key] ?? 'null')}`);
+    prompts.outro(colors.dim('Done.'));
+    return;
+  }
+
+  if (action === 'change') {
+    const key = prompts.unwrap(await prompts.select({
+      message: 'Which setting?',
+      options: CONFIG_KEYS.filter(k => {
+        // Skip computed/internal keys that don't make sense to change interactively
+        return !['version', 'last_digest_at'].includes(k);
+      }).map(k => ({
+        value: k,
+        label: k,
+        hint: `current: ${String(loadConfig()[k] ?? 'null')}`,
+      })),
+    })) as keyof RecallConfig;
+
+    const currentValue = loadConfig()[key];
+
+    if (typeof currentValue === 'boolean') {
+      const newVal = prompts.unwrap(await prompts.confirm({
+        message: `${key} (currently ${currentValue})`,
+        active: 'true',
+        inactive: 'false',
+      }));
+      updateConfig({ [key]: newVal });
+    } else if (key === 'ignored_patterns') {
+      prompts.log.info('Use "recall ignore add <pattern>" to manage ignored patterns.');
+      prompts.outro(colors.dim('Done.'));
+      return;
+    } else if (key === 'preferred_shell') {
+      const newVal = prompts.unwrap(await prompts.select({
+        message: `Shell (currently ${currentValue})`,
+        options: [
+          { value: 'auto', label: 'auto', hint: 'Auto-detect' },
+          { value: 'zsh', label: 'zsh' },
+          { value: 'bash', label: 'bash' },
+        ],
+      }));
+      updateConfig({ [key]: newVal });
+    } else {
+      // Number fields (embed_interval_ms)
+      const raw = prompts.unwrap(await prompts.text({
+        message: `${key} (currently ${currentValue})`,
+        placeholder: String(currentValue ?? ''),
+        validate(value) {
+          const n = Number(value);
+          if (isNaN(n) || n < 0) return 'Must be a positive number';
+        },
+      }));
+      updateConfig({ [key]: Number(raw) });
+    }
+
+    prompts.log.success(`${key} updated`);
+    prompts.outro(colors.success('Done.'));
+    return;
+  }
+
+  // action === 'reset'
+  const confirmed = prompts.unwrap(await prompts.confirm({
+    message: 'Reset all settings to defaults?',
+    active: 'Yes, reset them',
+    inactive: 'No, keep my settings',
+  }));
+
+  if (!confirmed) {
+    prompts.log.info('Cancelled — settings were not changed.');
+    prompts.outro(colors.dim('Nothing changed.'));
+    return;
+  }
+
+  resetConfig();
+  prompts.log.success('Config reset to defaults');
+  prompts.outro(colors.success('Done.'));
 }

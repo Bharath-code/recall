@@ -1,64 +1,78 @@
-import ora, { type Ora, type Options } from 'ora';
+/**
+ * spinner — Spinner utilities wrapping @clack/prompts spinner
+ *
+ * Provides the same createSpinner() / withSpinner() API as before,
+ * but powered by @clack/prompts for visual consistency with other
+ * interactive elements.
+ *
+ * Falls back to a no-op spinner in non-TTY/CI environments.
+ */
+
+import * as clack from '@clack/prompts';
 
 const isInteractive = process.stdout.isTTY && !process.env.NO_COLOR;
 
-// Spinner presets with semantic naming and brand-compliant colors
-const PRESETS: Record<string, Partial<Options>> = {
-  // Core operations
-  default: { spinner: 'dots', color: 'cyan' },
-  processing: { spinner: 'dots', color: 'cyan' },
-  
-  // Search operations
-  search: { spinner: 'dots', color: 'cyan' },
-  indexing: { spinner: 'line', color: 'cyan' },
-  
-  // Import/export operations
-  import: { spinner: 'line', color: 'cyan' },
-  export: { spinner: 'line', color: 'cyan' },
-  
-  // Scanning operations
-  scan: { spinner: 'dots', color: 'yellow' },
-  analyze: { spinner: 'dots', color: 'yellow' },
-  
-  // Health/diagnostics
-  doctor: { spinner: 'line', color: 'green' },
-  check: { spinner: 'line', color: 'green' },
-  
-  // AI operations
-  ai: { spinner: 'dots', color: 'magenta' },
-  generate: { spinner: 'dots', color: 'magenta' },
-  embed: { spinner: 'dots', color: 'magenta' },
-  
-  // Network operations
-  fetch: { spinner: 'dots', color: 'blue' },
-  download: { spinner: 'line', color: 'blue' },
-  
-  // Build operations
-  build: { spinner: 'dots', color: 'yellow' },
-  compile: { spinner: 'dots', color: 'yellow' },
-} as const;
+// ─── Adapter: wraps @clack/prompts spinner to match ora's API surface ──────
+
+interface SpinnerAdapter {
+  start(msg?: string): void;
+  stop(msg?: string): void;
+  succeed(msg?: string): void;
+  fail(msg?: string): void;
+}
+
+function createClackSpinner(text: string, _preset?: string): SpinnerAdapter {
+  const s = clack.spinner();
+  // Auto-start on creation, matching ora() behavior
+  s.start(text);
+
+  return {
+    start(msg?: string) {
+      // @clack/prompts spin is already running — update the message in-place
+      s.message(msg ?? text);
+    },
+    stop(msg?: string) {
+      s.stop(msg);
+    },
+    succeed(msg?: string) {
+      // Consumers add color to the message for visual distinction
+      s.stop(msg);
+    },
+    fail(msg?: string) {
+      s.stop(msg);
+    },
+  };
+}
+
+// ─── No-op spinner for non-TTY ──────────────────────────────────────────────
+
+function createNoopSpinner(): SpinnerAdapter {
+  return {
+    start() {},
+    stop() {},
+    succeed() {},
+    fail() {},
+  };
+}
+
+// ─── Public API ─────────────────────────────────────────────────────────────
 
 export function createSpinner(
   text: string,
-  preset: keyof typeof PRESETS = 'default'
-): Ora {
-  const config = PRESETS[preset] ?? PRESETS.default;
-  return ora({
-    text,
-    isEnabled: isInteractive,
-    ...config,
-  });
+  _preset?: string,
+): SpinnerAdapter {
+  if (!isInteractive) return createNoopSpinner();
+  return createClackSpinner(text, _preset);
 }
 
-// Helper for wrapping async operations with spinner
 export async function withSpinner<T>(
   text: string,
-  preset: keyof typeof PRESETS,
-  fn: () => Promise<T>
+  preset: string,
+  fn: () => Promise<T>,
 ): Promise<T> {
   const spinner = createSpinner(text, preset);
   spinner.start();
-  
+
   try {
     const result = await fn();
     spinner.succeed();

@@ -6,6 +6,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { detectShell, getShellRcPath, removeHookFromRc } from '../hooks/detect.ts';
 import { getRecallDir, closeDb } from '../db/index.ts';
 import { colors, formatHeader, getIcons } from '../ui/index.ts';
+import * as prompts from '../ui/prompts.ts';
 
 export interface UninstallFlags {
   keepData?: boolean;
@@ -13,6 +14,19 @@ export interface UninstallFlags {
 
 export async function handleUninstall(flags: UninstallFlags): Promise<void> {
   const icons = getIcons();
+
+  // On TTY, confirm before proceeding
+  if (prompts.isInteractive()) {
+    const confirmed = prompts.unwrap(await prompts.confirm({
+      message: 'Remove Recall from your system?',
+      active: 'Yes, uninstall',
+      inactive: 'No, keep it installed',
+    }));
+    if (!confirmed) {
+      prompts.log.info('Cancelled — Recall is still installed.');
+      return;
+    }
+  }
 
   console.log(formatHeader(`${icons.tool} recall uninstall`));
   console.log('');

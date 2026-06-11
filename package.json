@@ -27,6 +27,7 @@
     "@ai-sdk/cohere": "^3.0.30",
     "@ai-sdk/google": "^3.0.63",
     "@ai-sdk/openai": "^3.0.53",
+    "@clack/prompts": "^1.5.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ai": "^6.0.164",
     "cac": "^6.7.14",
