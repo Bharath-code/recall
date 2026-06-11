@@ -14,6 +14,8 @@
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --compile --outfile bin/recall && ./scripts/sign-macos.sh bin/recall",
     "test": "bun test",
+    "bench": "bun run scripts/benchmark.ts",
+    "bench:quick": "bun run scripts/benchmark.ts --quick",
     "lint": "tsc --noEmit",
     "clean": "rm -rf bin/ node_modules/",
     "landing:dev": "cd landing && bun run dev",

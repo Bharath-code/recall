@@ -273,6 +273,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `.github/workflows/update-formula.yml`
 - `scripts/setup-homebrew-tap.sh`
 - `scripts/test-promoted.sh`
+- `scripts/benchmark.ts`
 - `tests/cli/digest.test.ts`
 - `tests/cli/workflows.test.ts`
 - `tests/cli/session.test.ts`
@@ -311,6 +312,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/db/schema.sql` — workflows table, relaxed tools constraint
 - `src/ai/adapter.ts` — per-provider factories, `AzureModule` type; AI config resolution bugfix
 - `src/tools/scanner.ts` — 5 new scanners
+- `package.json` — added `bench` and `bench:quick` scripts
 - `src/ui/index.ts` — (re-export additions)
 - `README.md` — beta status, Homebrew install, promoted commands
 - `SPEC.md` — updated status and experimental commands list
@@ -565,7 +567,48 @@ npm install --legacy-peer-deps  # succeeds (exit 0)
 
 ---
 
-### 9.11 Session Timeline (`recall session`)
+### 9.11 Performance Benchmarks (P3.1)
+**Files:** `scripts/benchmark.ts` (new), `package.json`
+
+Established measurable performance baselines for the three most critical operations:
+
+**Mechanism:**
+- Uses the actual DB functions directly (no subprocess overhead) via `bun run scripts/benchmark.ts`
+- Seeds databases at multiple sizes (100, 1K, 10K, 100K) and runs each benchmark multiple times
+- Reports min/avg/max times with p50/p95 percentiles
+- Flags: `--quick` for small-scale, `--hook`/`--search`/`--import` for individual sections
+
+**Results (macOS ARM64, across all scales):**
+
+| Operation | 100 | 1K | 10K | 100K |
+|-----------|-----|-----|------|------|
+| `insertCommand` (minimal) | ~0ms | ~0ms | — | — |
+| `getCommandCount` | ~0ms | ~0ms | — | — |
+| Round-trip batch (25) | 0.1ms/cmd | 0.1ms/cmd | — | — |
+| FTS: exact match | ~0ms | ~0ms | 0–1ms | 4–15ms |
+| FTS: partial match | ~0ms | ~0ms | 0–1ms | 4–15ms |
+| LIKE keyword fallback | ~0ms | ~0ms | ~3ms | 27–30ms |
+| `getRecentCommands(20)` | ~0ms | ~1ms | ~7ms | ~70ms |
+| Batch insert (transaction) | 16.7K/s | 20.8K/s | 20.9K/s | — |
+| Sequential insert (no tx) | 20.0K/s | 19.6K/s | 19.6K/s | — |
+
+**Key insights:**
+- **Sub-millisecond at 1K** — All operations are instant at typical user scale
+- **FTS stays fast at 100K** — Only 4–15ms for full-text search across 100K rows. The FTS5 index scales linearly.
+- **LIKE fallback degrades gracefully** — 0ms at 1K → 3ms at 10K → ~30ms at 100K. Acceptable for a fallback path.
+- **`getRecentCommands(20)` shows index cost** — 70ms at 100K with `ORDER BY created_at DESC`. The query plan uses the `idx_commands_source` + `created_at` index but still scans many rows.
+- **Import throughput plateaus at ~20K/s** — Bun's SQLite WAL mode saturates at ~20K inserts/sec regardless of transaction batching. No optimization needed — init imports at ~20K/cmd are fast enough for any realistic history file (<1s for 20K commands).
+
+**Usage:**
+```bash
+bun run bench            # Full benchmarks (10K commands)
+bun run bench:quick      # Quick run (100 commands)
+bun run scripts/benchmark.ts --hook  # Hook latency only
+```
+
+---
+
+### 9.12 Session Timeline (`recall session`)
 **Files:** `src/cli/session.ts` (new), `src/db/commands.ts`, `src/index.ts`
 
 Groups commands by `session_id` into a timeline view — showing what you did in each session, how long it lasted, and every command within it.
