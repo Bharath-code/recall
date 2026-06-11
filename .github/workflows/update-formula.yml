@@ -1,0 +1,84 @@
+# ─── Update Homebrew Formula ────────────────────────────────────────────
+# Manual fallback — the main repo's release.yml handles this automatically.
+# Only use this workflow when you need to manually trigger a formula update
+# (e.g., if the auto-update failed or for pre-release testing).
+#
+# Lives in: tap repo (owner/homebrew-recall)
+# Triggered by: workflow_dispatch from GitHub UI
+#
+# Setup: see scripts/setup-homebrew-tap.sh in the main recall repo
+
+name: update-formula
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag (e.g. v0.2.0)'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download checksums from release
+        run: |
+          TAG="${{ inputs.version }}"
+          OWNER="Bharath-code"
+          REPO="recall"
+          BASE="https://github.com/${OWNER}/${REPO}/releases/download/${TAG}"
+
+          for asset in \
+            "recall-${TAG}-macos-arm64.tar.gz.sha256" \
+            "recall-${TAG}-macos-x64.tar.gz.sha256" \
+            "recall-${TAG}-linux-x64.tar.gz.sha256"; do
+            curl -sL -o "/tmp/${asset}" "${BASE}/${asset}"
+          done
+
+      - name: Extract checksums
+        id: checksums
+        run: |
+          echo "arm64=$(cut -d' ' -f1 /tmp/recall-${TAG}-macos-arm64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          echo "x64=$(cut -d' ' -f1 /tmp/recall-${TAG}-macos-x64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          echo "linux=$(cut -d' ' -f1 /tmp/recall-${TAG}-linux-x64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+        env:
+          TAG: ${{ inputs.version }}
+
+      - name: Update formula
+        run: |
+          TAG="${{ inputs.version }}"
+          VERSION="${TAG#v}"
+          ARM64="${{ steps.checksums.outputs.arm64 }}"
+          X64="${{ steps.checksums.outputs.x64 }}"
+          LINUX="${{ steps.checksums.outputs.linux }}"
+
+          sed -i "s/^  version \".*\"/  version \"${VERSION}\"/" Formula/recall.rb
+          sed -i "s|# CI: update-checksum-macos-arm64|# CI: update-checksum-macos-arm64|; s/sha256 \".*\"/sha256 \"${ARM64}\"/1" Formula/recall.rb
+          sed -i "s|# CI: update-checksum-macos-x64|# CI: update-checksum-macos-x64|; s/sha256 \".*\"/sha256 \"${X64}\"/1" Formula/recall.rb
+          sed -i "s|# CI: update-checksum-linux-x64|# CI: update-checksum-linux-x64|; s/sha256 \".*\"/sha256 \"${LINUX}\"/1" Formula/recall.rb
+
+      - name: Commit and push
+        run: |
+          git config user.name "Recall CI"
+          git config user.email "ci@recall-cli.dev"
+          BRANCH="release/${{ inputs.version }}"
+          git checkout -b "$BRANCH"
+          git add Formula/recall.rb
+          git commit -m "Release ${{ inputs.version }}"
+          git push origin "$BRANCH"
+
+      - name: Create pull request
+        run: |
+          gh pr create \
+            --title "Release ${{ inputs.version }}" \
+            --body "Automated formula update for [${{ inputs.version }}](https://github.com/Bharath-code/recall/releases/tag/${{ inputs.version }})." \
+            --head "release/${{ inputs.version }}" \
+            --base main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

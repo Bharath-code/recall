@@ -41,6 +41,7 @@ bun run clean         # rm -rf bin/ node_modules/
 Build quirks:
 - `bun run build` runs `scripts/sign-macos.sh`, which calls `codesign` on macOS. On non-macOS it no-ops.
 - Compiled output goes to `bin/recall`.
+- **Homebrew release**: `bun run build` produces the platform binary. The CI release workflow (`release.yml`) packages it as a tarball for the Homebrew tap. See `homebrew/Formula/recall.rb`.
 
 ## TypeScript paths (tsconfig)
 

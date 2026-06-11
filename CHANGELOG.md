@@ -1,6 +1,6 @@
 # Recall Changelog & Feature Reference
 
-> Last updated: 2026-04-22
+> Last updated: 2026-06-11
 
 This document catalogs every production-grade improvement, new feature, and architectural decision applied to Recall across all development sessions.
 
@@ -14,7 +14,10 @@ This document catalogs every production-grade improvement, new feature, and arch
 4. [Database & Schema Changes](#4-database--schema-changes)
 5. [Tool Scanner Expansion](#5-tool-scanner-expansion)
 6. [Test Coverage](#6-test-coverage)
-7. [Breaking Changes](#7-breaking-changes)
+7. [Homebrew Distribution](#7-homebrew-distribution)
+8. [CI & Release Infrastructure](#8-ci--release-infrastructure)
+9. [Major Changes (v0.1 → v0.2)](#9-major-changes-v01--v02)
+10. [Breaking Changes](#10-breaking-changes)
 
 ---
 
@@ -239,7 +242,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 
 ---
 
-## 7. Breaking Changes
+## 10. Breaking Changes
 
 **None.** All changes are backward-compatible:
 - Existing databases auto-migrate via `applyCompatibilityMigrations()`.
@@ -255,27 +258,48 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/cli/workflows.ts`
 - `src/cli/restore.ts`
 - `src/db/workflows.ts`
+- `src/hooks/cd-tracker.ts`
+- `src/ui/json-output.ts`
+- `homebrew/Formula/recall.rb`
+- `.github/workflows/release.yml`
+- `.github/workflows/update-formula.yml`
+- `scripts/setup-homebrew-tap.sh`
+- `scripts/test-promoted.sh`
 - `tests/cli/digest.test.ts`
 - `tests/cli/workflows.test.ts`
 - `tests/tools/scanner.test.ts`
 - `bun-api-migration-plan.md`
 
 ### Modified Files (production code)
-- `src/index.ts` — registered digest, workflows, restore
-- `src/cli/doctor.ts` — `Bun.which()`
-- `src/cli/init.ts` — `Bun.file().text()`
-- `src/cli/hook.ts` — decomposed into helpers
+- `src/index.ts` — registered digest, workflows, restore; promoted ask/fix/forgotten-tools; added --json flags
+- `src/cli/doctor.ts` — `Bun.which()`, `--json` flag
+- `src/cli/init.ts` — `Bun.file().text()`, updated init wizard for promoted commands
+- `src/cli/hook.ts` — decomposed into helpers; added `handleHookCd()` for auto-cd
 - `src/cli/export.ts` — path validation
 - `src/cli/import.ts` — path validation
+- `src/cli/ask.ts` — `--json` flag
+- `src/cli/fix.ts` — promoted from experimental, `--json` flag
+- `src/cli/forgotten-tools.ts` — promoted from experimental, `--json` flag
+- `src/cli/search.ts` — `--json` flag
+- `src/cli/recent.ts` — `--json` flag
+- `src/cli/project.ts` — `--json` flag
+- `src/cli/config.ts` — `--json` flag
+- `src/cli/digest.ts` — `--json` flag
+- `src/cli/workflows.ts` — `--json` flag
 - `src/hooks/detect.ts` — Bun-native file I/O
+- `src/hooks/zsh-snippet.ts` — added `chpwd` hook for auto-cd
+- `src/hooks/bash-snippet.ts` — added `cd()` override for auto-cd
 - `src/db/index.ts` — singleton, migrations, `setDb()`
 - `src/db/commands.ts` — Zod schema, `withDbCatch()`, `getTopCommandsSince()`
 - `src/db/tools.ts` — expanded source union
 - `src/db/errors.ts` — `getRecentErrorsSince()`
 - `src/db/schema.sql` — workflows table, relaxed tools constraint
-- `src/ai/adapter.ts` — per-provider factories, `AzureModule` type
+- `src/ai/adapter.ts` — per-provider factories, `AzureModule` type; AI config resolution bugfix
 - `src/tools/scanner.ts` — 5 new scanners
 - `src/ui/index.ts` — (re-export additions)
+- `README.md` — beta status, Homebrew install, promoted commands
+- `SPEC.md` — updated status and experimental commands list
+- `AGENTS.md` — updated experimental commands, Homebrew build note
 
 ### Modified Files (tests)
 - `tests/db/commands.test.ts` — rewritten with seeded data
@@ -284,22 +308,149 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 
 ---
 
+---
+
+## 7. Homebrew Distribution
+
+### 7.1 Homebrew Tap Setup
+**New files:** `homebrew/Formula/recall.rb`, `scripts/setup-homebrew-tap.sh`
+
+Recall now ships via Homebrew. The tap repository (`owner/homebrew-recall`) provides a formula with:
+- **Binary install** — downloads platform-specific tarballs from GitHub Releases (macOS ARM, macOS Intel, Linux x86_64)
+- **Source install** — `brew install --HEAD recall` builds from source using `bun build --compile`
+- **Auto-updating formula** — CI updates version + SHA256 on each release
+
+**Install:**
+```bash
+brew tap <owner>/recall
+brew install recall
+```
+
+### 7.2 Setup Script
+**File:** `scripts/setup-homebrew-tap.sh`
+
+One-time script that creates the `homebrew-recall` GitHub repository, populates it with the initial formula and CI workflow. Detects the GitHub org from `git remote`.
+
+---
+
+## 8. CI & Release Infrastructure
+
+### 8.1 Release Workflow
+**File:** `.github/workflows/release.yml`
+
+Triggered by `git tag v*`. Builds compiled binaries on 3 platforms in parallel:
+- `macos-latest` (ARM64) — signed + ad-hoc notarized
+- `macos-13` (Intel x64) — signed + ad-hoc notarized
+- `ubuntu-latest` (Linux x64)
+
+Each build produces a `.tar.gz` with the standalone binary + `.sha256` checksum, uploaded to the GitHub Release.
+
+### 8.2 Tap Update Job
+After all platforms finish, the `update-homebrew` job:
+1. Checks out the `homebrew-recall` tap repo using `HOMEBREW_TAP_PAT`
+2. Downloads checksums from the release
+3. Updates formula version + all 3 SHA256 values via line-anchored `sed`
+4. Creates a PR against the tap repo with the updated formula
+
+Gracefully skips if `HOMEBREW_TAP_PAT` is not set.
+
+### 8.3 Manual Fallback Workflow
+**File:** `.github/workflows/update-formula.yml`
+
+Workflow that lives in the tap repo for manual trigger (e.g., if auto-update failed or for pre-release testing).
+
+---
+
+## 9. Major Changes (v0.1 → v0.2)
+
+### 9.1 Auto-CD Project Memory
+**Files:** `src/hooks/cd-tracker.ts` (new), `src/cli/hook.ts`, `src/hooks/zsh-snippet.ts`, `src/hooks/bash-snippet.ts`
+
+When you `cd` into a git repo, Recall shows a brief project context summary:
+```
+  recall: my-project | git status · bun test · npm run dev
+         ↳ startup: npm run dev
+         ↳ workflow: git add → git commit → git push (5x)
+```
+
+**Mechanism:**
+- **Zsh:** `chpwd` hook fires on every directory change (`cd`, `pushd`, `popd`)
+- **Bash:** `cd()` function override fires after successful navigation (with `& disown` for fire-and-forget)
+- **Anti-spam:** 5-minute cooldown per repo via file-based timestamps in `~/.recall/cd-hints/`
+- **Privacy:** respects `isCaptureEnabled()`, silent on non-git dirs and repos without data
+
+### 9.2 Promoted Commands: ask, fix, forgotten-tools
+**Files:** `src/index.ts`, `src/cli/init.ts`, `README.md`, `SPEC.md`, `AGENTS.md`
+
+Three commands promoted from experimental (`RECALL_EXPERIMENTAL=1`) to production:
+- `recall ask "<query>"` — AI-powered semantic search with keyword fallback
+- `recall fix` — shows known fixes for recent errors
+- `recall forgotten-tools` — surfaces installed but unused tools
+
+**No gating:** Works without `RECALL_EXPERIMENTAL`. AI features require opt-in config, not env flags.
+
+### 9.3 `--json` Output on All Commands
+**Files:** `src/ui/json-output.ts` (new), 10 CLI handler files, `src/index.ts`
+
+Every output-producing command now supports `--json` for programmatic use and MCP integration:
+
+| Command | JSON Output |
+|---------|-------------|
+| `search` | `Command[]` — flat array |
+| `recent` | `Command[]` — flat array |
+| `project` | `{ repo, recent_commands, startup_commands, workflows, failed_commands, successful_commands }` |
+| `doctor` | `{ healthy, issues, checks, stats, ai_provider }` |
+| `config` | Full `RecallConfig` object |
+| `digest` | `{ top_commands, dormant_tools, repeated_errors }` |
+| `workflows` | `Workflow[]` — flat array |
+| `ask` | `{ results, search_method, ai_error }` |
+| `fix` | `{ fixes }` or `{ fixes, errors }` |
+| `forgotten-tools` | `ScannedTool[]` — flat array |
+
+### 9.4 AI Config Resolution Bugfix
+**File:** `src/ai/adapter.ts`
+
+**Bug:** Setting `RECALL_AI_PROVIDER=none` fell through to auto-detect, picking up API keys from the environment.
+
+**Fix:** Explicit `none` and `local` checks now return immediately in the explicit provider block, skipping auto-detect entirely.
+
+Also fixed a TypeScript error: removed dead `(provider as string) === 'ollama'` cast in the auto-detect block (provider is always `undefined` at that point).
+
+### 9.5 Integration Tests
+**File:** `scripts/test-promoted.sh` (new)
+
+13-test integration suite covering all promoted commands:
+- `forgotten-tools` (text + JSON)
+- `ask` keyword fallback (text + JSON)
+- `fix` with captured failures (text + JSON)
+- `--json` on `recent`, `search`, `project`, `doctor`
+- RECALL_EXPERIMENTAL gate removal verification
+
+### 9.6 Status: Beta
+**Files:** `README.md`, `SPEC.md`
+
+Project status updated from "dogfood MVP" to **beta** — core features (capture, search, project memory, tool rediscovery, AI search) are production-ready.
+
+---
+
 ## Quick Reference: What You Can Do Now
 
 ```bash
 # Phase 1: Trust & Memory
 recall init                              # Set up hooks, import history, scan tools
-recall search "git push"                 # Find past commands
-recall recent                            # Last 20 commands
-recall project                           # Current repo context
-recall doctor                            # Health check
+recall search "git push"                 # Find past commands (add --json for programmatic use)
+recall recent                            # Last 20 commands (add --json)
+recall project                           # Current repo context (add --json)
+recall doctor                            # Health check (add --json)
 
-# Phase 2: Tool Rediscovery
+# Phase 2: AI & Error Recovery
+recall ask "how do I deploy?"            # AI-powered semantic search (keyword fallback)
+recall fix                               # Show known fixes for recent errors
 recall forgotten-tools                   # Installed but unused tools
 recall digest                            # Weekly activity summary
 
 # Phase 3: Workflow Automation
-recall workflows                         # Detect repeated sequences
+recall workflows                         # Detect repeated sequences (add --json)
 recall restore --id 1                    # Replay a workflow
 
 # Data management
@@ -308,4 +459,6 @@ recall import --file backup.json         # Restore
 recall delete --id 42                    # Remove one command
 recall delete --all --yes                # Nuclear option
 recall pause / recall resume             # Toggle capture
+recall <command> --help                  # Show help for any command
+recall <command> --json                  # Machine-readable output for any command
 ```

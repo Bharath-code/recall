@@ -54,7 +54,20 @@ All core commands are available by default. A few experimental features (workflo
 
 ---
 
-## Install From Source
+## Install
+
+### Homebrew (recommended)
+
+```bash
+brew tap Bharath-code/recall
+brew install recall
+recall --help
+recall init
+```
+
+*Requires macOS or Linux (x86_64). The tap formula is auto-updated on each release.*
+
+### From Source
 
 Requirements:
 - macOS with zsh

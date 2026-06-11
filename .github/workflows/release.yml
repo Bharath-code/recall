@@ -1,0 +1,212 @@
+# ─── Release workflow ─────────────────────────────────────────────────
+# Triggered by: git tag v*
+# 1. Builds compiled binaries for macOS (ARM + Intel) and Linux (x86_64)
+# 2. Creates signed + notarized tarballs on macOS
+# 3. Uploads platform tarballs to the GitHub Release
+# 4. Pushes the updated formula to the homebrew-recall tap repo
+#
+# Prerequisites:
+#   - A GitHub PAT with `repo` scope stored as HOMEBREW_TAP_PAT secret
+#   - The tap repo ({owner}/homebrew-recall) must exist (run setup-homebrew-tap.sh)
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── macOS ARM build ──────────────────────────────────────────────────
+  macos-arm64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binary
+        run: |
+          bun build src/index.ts --compile --outfile bin/recall
+          bash scripts/sign-macos.sh bin/recall
+
+      - name: Package tarball
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp bin/recall dist/recall
+          cd dist
+          tar czf "recall-v${version}-macos-arm64.tar.gz" recall
+          shasum -a 256 "recall-v${version}-macos-arm64.tar.gz" > "recall-v${version}-macos-arm64.tar.gz.sha256"
+
+      - name: Upload release asset
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release upload "$GITHUB_REF_NAME" \
+            "dist/recall-v${version}-macos-arm64.tar.gz" \
+            "dist/recall-v${version}-macos-arm64.tar.gz.sha256"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── macOS Intel build ────────────────────────────────────────────────
+  macos-x64:
+    runs-on: macos-13  # Intel runner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binary
+        run: |
+          bun build src/index.ts --compile --outfile bin/recall
+          bash scripts/sign-macos.sh bin/recall
+
+      - name: Package tarball
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp bin/recall dist/recall
+          cd dist
+          tar czf "recall-v${version}-macos-x64.tar.gz" recall
+          shasum -a 256 "recall-v${version}-macos-x64.tar.gz" > "recall-v${version}-macos-x64.tar.gz.sha256"
+
+      - name: Upload release asset
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release upload "$GITHUB_REF_NAME" \
+            "dist/recall-v${version}-macos-x64.tar.gz" \
+            "dist/recall-v${version}-macos-x64.tar.gz.sha256"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Linux x86_64 build ───────────────────────────────────────────────
+  linux-x64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binary
+        run: bun build src/index.ts --compile --outfile bin/recall
+
+      - name: Package tarball
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp bin/recall dist/recall
+          cd dist
+          tar czf "recall-v${version}-linux-x64.tar.gz" recall
+          shasum -a 256 "recall-v${version}-linux-x64.tar.gz" > "recall-v${version}-linux-x64.tar.gz.sha256"
+
+      - name: Upload release asset
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release upload "$GITHUB_REF_NAME" \
+            "dist/recall-v${version}-linux-x64.tar.gz" \
+            "dist/recall-v${version}-linux-x64.tar.gz.sha256"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Update homebrew tap formula ──────────────────────────────────────
+  update-homebrew:
+    needs: [macos-arm64, macos-x64, linux-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PAT
+        id: check-pat
+        env:
+          TOKEN: ${{ secrets.HOMEBREW_TAP_PAT }}
+        run: |
+          if [[ -z "$TOKEN" ]]; then
+            echo "HOMEBREW_TAP_PAT not set — skipping tap update"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout tap repo
+        if: steps.check-pat.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-recall
+          token: ${{ secrets.HOMEBREW_TAP_PAT }}
+
+      - name: Download checksums
+        if: steps.check-pat.outputs.skip != 'true'
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+
+          for asset in \
+            "recall-${TAG}-macos-arm64.tar.gz.sha256" \
+            "recall-${TAG}-macos-x64.tar.gz.sha256" \
+            "recall-${TAG}-linux-x64.tar.gz.sha256"; do
+            curl -sL -o "/tmp/${asset}" "${BASE}/${asset}"
+          done
+
+      - name: Extract checksums
+        if: steps.check-pat.outputs.skip != 'true'
+        id: checksums
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "arm64=$(cut -d' ' -f1 /tmp/recall-${TAG}-macos-arm64.tar.gz.sha256)" >> "$GITHUB_OUTPUT"
+          echo "x64=$(cut -d' ' -f1 /tmp/recall-${TAG}-macos-x64.tar.gz.sha256)" >> "$GITHUB_OUTPUT"
+          echo "linux=$(cut -d' ' -f1 /tmp/recall-${TAG}-linux-x64.tar.gz.sha256)" >> "$GITHUB_OUTPUT"
+
+      - name: Update formula version
+        if: steps.check-pat.outputs.skip != 'true'
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          sed -i 's/^  version ".*"/  version "'"${VERSION}"'"/' Formula/recall.rb
+
+      - name: Update formula checksums
+        if: steps.check-pat.outputs.skip != 'true'
+        run: |
+          ARM64="${{ steps.checksums.outputs.arm64 }}"
+          X64="${{ steps.checksums.outputs.x64 }}"
+          LINUX="${{ steps.checksums.outputs.linux }}"
+          sed -i '/# CI: update-checksum-macos-arm64/{n;s/sha256 ".*"/sha256 "'"${ARM64}"'"/}' Formula/recall.rb
+          sed -i '/# CI: update-checksum-macos-x64/{n;s/sha256 ".*"/sha256 "'"${X64}"'"/}' Formula/recall.rb
+          sed -i '/# CI: update-checksum-linux-x64/{n;s/sha256 ".*"/sha256 "'"${LINUX}"'"/}' Formula/recall.rb
+
+      - name: Commit and push
+        if: steps.check-pat.outputs.skip != 'true'
+        run: |
+          TAG="${{ github.ref_name }}"
+          git config user.name "Recall CI"
+          git config user.email "ci@recall-cli.dev"
+          BRANCH="release/${TAG}"
+          git checkout -b "$BRANCH"
+          git add Formula/recall.rb
+          git diff --cached --quiet || git commit -m "Release ${TAG}"
+          git push origin "$BRANCH"
+
+      - name: Create pull request
+        if: steps.check-pat.outputs.skip != 'true'
+        run: |
+          TAG="${{ github.ref_name }}"
+          gh pr create \
+            --title "Release ${TAG}" \
+            --body "Automated formula update for [${TAG}](https://github.com/${{ github.repository }}/releases/tag/${TAG})." \
+            --head "release/${TAG}" \
+            --base main || echo "PR may already exist"
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_PAT }}

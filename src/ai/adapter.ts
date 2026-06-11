@@ -304,7 +304,11 @@ export function resolveAIConfig(): AIConfig {
   }
 
   // ── Explicit provider set ─────────────────────────────────────────────────
-  if (provider && provider !== 'local' && provider !== 'none') {
+  if (provider) {
+    // 'none' and 'local' are explicit opt-outs — return immediately, skip auto-detect
+    if (provider === 'none') return { provider: 'none' };
+    if (provider === 'local') return { provider: 'local' };
+
     return {
       provider,
       embeddingModel,
@@ -356,8 +360,8 @@ export function resolveAIConfig(): AIConfig {
     };
   }
 
-  // Ollama: auto-detect from OLLAMA_HOST, or explicit provider=ollama
-  const isOllama = (provider as string) === 'ollama' || !!process.env.OLLAMA_HOST;
+  // Ollama: auto-detect from OLLAMA_HOST
+  const isOllama = !!process.env.OLLAMA_HOST;
   if (isOllama) {
     return {
       provider: 'ollama',
@@ -366,8 +370,7 @@ export function resolveAIConfig(): AIConfig {
     };
   }
 
-  // ── Defaults ──────────────────────────────────────────────────────────────
-  if (provider === 'none') return { provider: 'none' };
+  // ── Defaults — no provider set and nothing auto-detected ──────────────────
   return { provider: 'local' }; // ONNX in-process, no network
 }
 
