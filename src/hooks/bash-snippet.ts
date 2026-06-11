@@ -27,6 +27,17 @@ _recall_prompt_command() {
   fi
 }
 
+# CD override — shows project context when entering a repo
+cd() {
+  builtin cd "$@"
+  local exit_code=$?
+  if [[ $exit_code -eq 0 ]]; then
+    recall hook cd --cwd "$(pwd)" --session-id "$_RECALL_SESSION_ID" 2>/dev/null &
+    disown 2>/dev/null
+  fi
+  return $exit_code
+}
+
 if [[ -z "\$_RECALL_INSTALLED" ]]; then
   export _RECALL_INSTALLED=1
   PROMPT_COMMAND="_recall_prompt_command;\${PROMPT_COMMAND:-}"

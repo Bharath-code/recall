@@ -37,6 +37,12 @@ _recall_precmd() {
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _recall_preexec
 add-zsh-hook precmd _recall_precmd
+
+# CD hook — shows project context when entering a repo
+_recall_chpwd() {
+  recall hook cd --cwd "$(pwd)" --session-id "$$" 2>/dev/null
+}
+add-zsh-hook chpwd _recall_chpwd
 # ─── End Recall Hook ─────────────────────────────────────
 `.trim();
 }

@@ -8,19 +8,22 @@
 import { z } from 'zod';
 import { join } from 'node:path';
 import { normalize, shouldSkipCommand, isDuplicate } from '../import/normalizer.ts';
-import { insertCommand, updateCommand, getRecentNormalizedCommands } from '../db/commands.ts';
+import { insertCommand, updateCommand, getRecentNormalizedCommands, getRecentCommands, getStartupCommands } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { getDb } from '../db/index.ts';
 import { getRepoContext } from '../repos/detector.ts';
 import { generateZshSnippet } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet } from '../hooks/bash-snippet.ts';
 import { detectShell, getShellRcPath, appendHookToRc } from '../hooks/detect.ts';
+import { detectCommonWorkflows } from '../workflows/detector.ts';
+import { colors } from '../ui/index.ts';
 import {
   commandMatchesIgnoredPattern,
   isCaptureEnabled,
   redactSecretsFromCommand,
   shouldAutoEmbed,
 } from '../config/index.ts';
+import { hasShownRecently, markShown } from '../hooks/cd-tracker.ts';
 
 const CaptureSchema = z.object({
   rawCommand: z.string().min(1),
@@ -58,6 +61,9 @@ export async function handleHookAction(
       return;
     case 'unbind-ctrl-r':
       await handleUnbindCtrlR();
+      return;
+    case 'cd':
+      await handleHookCd(args);
       return;
     default:
       console.error(`Unsupported hook action: ${action}. Supported: capture, update, zsh, bash, bind-ctrl-r, unbind-ctrl-r`);
@@ -242,6 +248,59 @@ export async function handleUnbindCtrlR(): Promise<void> {
   await Bun.write(rcPath, newContent);
   console.log(`Ctrl-R widget removed from ${rcPath}`);
   console.log('Run `source ' + rcPath + '` or restart your shell to apply');
+}
+
+// ─── CD Hook ─────────────────────────────────────────────────────────────────────
+
+/**
+ * handleHookCd — Called when user cd's into a new directory.
+ * If it's a git repo with captured data, shows a brief project context summary.
+ */
+export async function handleHookCd(args: Record<string, string | undefined>): Promise<void> {
+  try {
+    if (!isCaptureEnabled()) return;
+
+    const cwd = args.cwd ?? args['cwd'] ?? process.cwd();
+
+    // Get repo context
+    const repoCtx = await getRepoContext(cwd);
+    if (!repoCtx) return; // Not a git repo — silent
+
+    // Check if we've shown this repo recently (anti-spam)
+    if (hasShownRecently(repoCtx.hash)) return;
+
+    // Get recent commands for this repo
+    const recent = getRecentCommands({ repo_path_hash: repoCtx.hash, limit: 5 });
+    if (recent.length === 0) return; // No data — silent
+
+    markShown(repoCtx.hash);
+
+    // Build output
+    const repoName = repoCtx.name;
+    const lastCmds = recent.slice(0, 3).map(c => c.raw_command).join(' · ');
+
+    // Check for startup patterns
+    const startup = getStartupCommands(repoCtx.hash, 1);
+
+    // Check for common workflows
+    const workflows = detectCommonWorkflows(repoCtx.hash, 1);
+
+    const lines: string[] = [];
+    lines.push(`  ${colors.dim(`recall: ${repoName} | ${lastCmds}`)}`);
+
+    if (startup.length > 0) {
+      lines.push(`  ${colors.dim(`         ↳ startup: ${startup[0].raw_command}`)}`);
+    }
+
+    if (workflows.length > 0) {
+      const wf = workflows[0];
+      lines.push(`  ${colors.dim(`         ↳ workflow: ${wf.commands.join(' → ')} (${wf.frequency}x)`)}`);
+    }
+
+    console.log(lines.join('\n'));
+  } catch {
+    // Never fail the shell — cd must always succeed
+  }
 }
 
 function generateZshCtrlRWidget(): string {
