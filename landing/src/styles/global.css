@@ -3,6 +3,54 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Light mode (default) */
+    --color-ink: 255 255 255;
+    --color-slate: 241 245 249;
+    --color-terminal: 226 232 240;
+    --color-cyan: 6 182 212;
+    --color-mint: 16 185 129;
+    --color-ember: 220 38 38;
+    --color-dust: 100 116 139;
+    --color-cloud: 15 23 42;
+
+    --nav-bg: 255 255 255 / 0.7;
+    --nav-border: 0 0 0 / 0.08;
+    --nav-shadow: 0 0 0 / 0.08;
+    --card-bg: 241 245 249 / 0.5;
+    --card-border: 226 232 240;
+    --section-border: 226 232 240 / 0.5;
+    --bg-gradient-from: 248 250 252;
+    --bg-gradient-via: 241 245 249;
+    --bg-gradient-to: 226 232 240;
+    --terminal-bg: 255 255 255 / 0.9;
+    --terminal-header: 241 245 249;
+  }
+
+  .dark {
+    /* Dark mode */
+    --color-ink: 26 26 46;
+    --color-slate: 22 33 62;
+    --color-terminal: 15 52 96;
+    --color-cyan: 0 217 255;
+    --color-mint: 0 255 159;
+    --color-ember: 255 107 107;
+    --color-dust: 136 146 176;
+    --color-cloud: 230 230 230;
+
+    --nav-bg: 26 26 46 / 0.7;
+    --nav-border: 255 255 255 / 0.1;
+    --nav-shadow: 0 0 0 / 0.3;
+    --card-bg: 22 33 62 / 0.2;
+    --card-border: 22 33 62;
+    --section-border: 22 33 62 / 0.5;
+    --bg-gradient-from: 26 26 46;
+    --bg-gradient-via: 26 26 46;
+    --bg-gradient-to: 15 52 96;
+    --terminal-bg: 26 26 46 / 0.8;
+    --terminal-header: 22 33 62;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -12,6 +60,12 @@
   body {
     @apply bg-ink text-cloud;
     text-wrap: pretty;
+  }
+
+  /* Theme transition - all themed elements fade smoothly */
+  body, .bg-ink, .bg-slate, .border-slate, .text-cloud, .text-dust,
+  .bg-gradient-to-br, .bg-gradient-to-r {
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
   }
 }
 
@@ -28,13 +82,13 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Scroll-triggered reveal animation */
+  /* Spring-based scroll reveal animation */
   .reveal {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(24px);
     transition-property: opacity, transform;
-    transition-duration: 0.6s;
-    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    transition-duration: 0.8s;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .reveal.revealed {
@@ -44,11 +98,11 @@
 
   /* Stagger children delays */
   .stagger-children > *:nth-child(1) { --stagger-delay: 0ms; }
-  .stagger-children > *:nth-child(2) { --stagger-delay: 80ms; }
-  .stagger-children > *:nth-child(3) { --stagger-delay: 160ms; }
-  .stagger-children > *:nth-child(4) { --stagger-delay: 240ms; }
-  .stagger-children > *:nth-child(5) { --stagger-delay: 320ms; }
-  .stagger-children > *:nth-child(6) { --stagger-delay: 400ms; }
+  .stagger-children > *:nth-child(2) { --stagger-delay: 100ms; }
+  .stagger-children > *:nth-child(3) { --stagger-delay: 200ms; }
+  .stagger-children > *:nth-child(4) { --stagger-delay: 300ms; }
+  .stagger-children > *:nth-child(5) { --stagger-delay: 400ms; }
+  .stagger-children > *:nth-child(6) { --stagger-delay: 500ms; }
 
   .stagger-children > .reveal {
     transition-delay: var(--stagger-delay, 0ms);

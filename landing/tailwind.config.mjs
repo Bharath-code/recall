@@ -4,14 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#1a1a2e',
-        slate: '#16213e',
-        terminal: '#0f3460',
-        cyan: '#00d9ff',
-        mint: '#00ff9f',
-        ember: '#ff6b6b',
-        dust: '#8892b0',
-        cloud: '#e6e6e6',
+        ink: 'rgb(var(--color-ink) / <alpha-value>)',
+        slate: 'rgb(var(--color-slate) / <alpha-value>)',
+        terminal: 'rgb(var(--color-terminal) / <alpha-value>)',
+        cyan: 'rgb(var(--color-cyan) / <alpha-value>)',
+        mint: 'rgb(var(--color-mint) / <alpha-value>)',
+        ember: 'rgb(var(--color-ember) / <alpha-value>)',
+        dust: 'rgb(var(--color-dust) / <alpha-value>)',
+        cloud: 'rgb(var(--color-cloud) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
