@@ -4,8 +4,13 @@
 
 import { detectAndStoreWorkflows } from '../db/workflows.ts';
 import { colors, formatHeader, getIcons, SPACING, createSpinner } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
-export function handleWorkflows(): void {
+export interface WorkflowsFlags {
+  json?: boolean;
+}
+
+export function handleWorkflows(flags: WorkflowsFlags = {}): void {
   const icons = getIcons();
 
   console.log(formatHeader(`${icons.brain} recall workflows`));
@@ -16,6 +21,11 @@ export function handleWorkflows(): void {
 
   const workflows = detectAndStoreWorkflows();
   spinner.stop();
+
+  if (flags.json) {
+    outputJson(workflows);
+    return;
+  }
 
   if (workflows.length === 0) {
     console.log(`${SPACING.indent}${colors.dim('No repeated command sequences detected yet.')}`);

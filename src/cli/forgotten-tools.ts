@@ -4,6 +4,7 @@
 
 import { getDormantTools } from '../db/tools.ts';
 import { colors, formatHeader, formatRelativeTime, getIcons } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
 // Known tool alternatives — maps suboptimal tools to better alternatives
 const TOOL_ALTERNATIVES: Record<string, { better: string; reason: string; alias: string }> = {
@@ -19,9 +20,18 @@ const TOOL_ALTERNATIVES: Record<string, { better: string; reason: string; alias:
   man: { better: 'tldr', reason: 'tldr shows practical examples instead of full manuals', alias: '' },
 };
 
-export function handleForgottenTools(): void {
+export interface ForgottenToolsFlags {
+  json?: boolean;
+}
+
+export function handleForgottenTools(flags: ForgottenToolsFlags = {}): void {
   const icons = getIcons();
   const dormant = getDormantTools(30);
+
+  if (flags.json) {
+    outputJson(dormant);
+    return;
+  }
 
   console.log(formatHeader(`${icons.tool} recall forgotten-tools`));
   console.log('');

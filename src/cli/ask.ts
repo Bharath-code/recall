@@ -12,8 +12,13 @@ import { searchSimilar, deserializeVector } from '../ai/embeddings.ts';
 import { getDb } from '../db/index.ts';
 import { searchCommandsKeyword, getCommandById, type Command } from '../db/commands.ts';
 import { colors, formatCommandLine, formatHeader, getIcons, createSpinner } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
-export async function handleAsk(query: string): Promise<void> {
+export interface AskFlags {
+  json?: boolean;
+}
+
+export async function handleAsk(query: string, flags: AskFlags = {}): Promise<void> {
   const icons = getIcons();
 
   if (!query?.trim()) {
@@ -70,6 +75,15 @@ export async function handleAsk(query: string): Promise<void> {
   }
 
   spinner.stop();
+
+  if (flags.json) {
+    outputJson({
+      results,
+      search_method: searchMethod,
+      ai_error: aiError,
+    });
+    return;
+  }
 
   if (results.length === 0) {
     console.log(colors.dim('  No matching commands found.'));

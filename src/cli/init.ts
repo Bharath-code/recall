@@ -159,13 +159,12 @@ export async function handleInit(flags: InitFlags): Promise<void> {
   console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall project')}         ${colors.textDim('— Current repo context')}`);
   console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall doctor')}          ${colors.textDim('— Check installation')}`);
 
-  // Show experimental commands only when enabled
-  if (process.env.RECALL_EXPERIMENTAL === '1') {
-    console.log('');
-    console.log(colors.textDim(`${SPACING.indent}Experimental commands:`));
-    console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall ask "<question>"')} ${colors.textDim('— AI-powered search')}`);
-    console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall fix')}             ${colors.textDim('— Show fixes for errors')}`);
-  }
+  console.log('');
+  console.log(colors.textDim(`${SPACING.indent}Advanced commands:`));
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall ask "<question>"')} ${colors.textDim('— AI-powered semantic search')}`);
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall fix')}             ${colors.textDim('— Show fixes for recent errors')}`);
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall forgotten-tools')} ${colors.textDim('— Find installed but unused tools')}`);
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall digest')}          ${colors.textDim('— Weekly terminal activity summary')}`);
 
   console.log('');
 

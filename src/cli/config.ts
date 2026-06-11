@@ -4,6 +4,7 @@
 
 import { loadConfig, updateConfig, resetConfig, type RecallConfig } from '../config/index.ts';
 import { colors, getIcons } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
 const CONFIG_KEYS: (keyof RecallConfig)[] = [
   'capture_enabled',
@@ -23,6 +24,7 @@ export interface ConfigFlags {
   set?: string;
   list?: boolean;
   reset?: boolean;
+  json?: boolean;
 }
 
 export function handleConfig(flags: ConfigFlags): void {
@@ -77,6 +79,12 @@ export function handleConfig(flags: ConfigFlags): void {
     console.log(`  ${icons.check} ${colors.success(`${key} updated`)}`);
     console.log('');
     console.log(`  ${key}: ${colors.bold(formatValue(parsed.value))}`);
+    return;
+  }
+
+  // --json
+  if (flags.json) {
+    outputJson(cfg);
     return;
   }
 

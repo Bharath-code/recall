@@ -8,7 +8,7 @@
 
 **User:** Software developers, DevOps engineers, CLI power users (Unix/Linux background, 22-40yo)
 
-**Status:** Dogfood MVP for Mac developers using zsh. Later-phase commands are gated behind `RECALL_EXPERIMENTAL=1`.
+**Status:** Beta. Core features (capture, search, project memory, tool rediscovery, AI search) are production-ready. Workflow replay and background embedding are gated behind `RECALL_EXPERIMENTAL=1`.
 
 **Success (Phase 1 MVP):**
 - `recall search <term>` returns matching commands in <100ms
@@ -73,7 +73,9 @@ recall uninstall [--keep-data] # Remove hooks
 recall doctor                   # Debug installation
 ```
 
-Experimental commands are registered only when `RECALL_EXPERIMENTAL=1`: `ask`, `fix`, `replay`, `forgotten-tools`, and `embed`.
+Experimental commands are registered only when `RECALL_EXPERIMENTAL=1`: `replay`, and `embed`.
+
+Production-only commands (`ask`, `fix`, `forgotten-tools`, `digest`, `workflows`, `restore`, `pick`, `export`, `import`, `pause`, `resume`, `config`, `ignore`, `delete`) are always available.
 
 ### Shell Hook (internal)
 ```bash

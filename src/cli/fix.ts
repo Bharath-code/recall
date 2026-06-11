@@ -5,8 +5,13 @@
 import { lookupFix, extractErrorMessage } from '../errors/matcher.ts';
 import { getFailedCommands } from '../db/commands.ts';
 import { colors, formatHeader, formatRelativeTime, getIcons } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
-export function handleFix(): void {
+export interface FixFlags {
+  json?: boolean;
+}
+
+export function handleFix(flags: FixFlags = {}): void {
   const icons = getIcons();
 
   console.log(formatHeader(`${icons.fix} recall fix`));
@@ -21,7 +26,16 @@ export function handleFix(): void {
     return;
   }
 
-  let foundFixes = false;
+  // Collect fixes for JSON output
+  const fixes: Array<{
+    error: string;
+    command: string;
+    fix_command: string;
+    confidence: number;
+    occurrences: number;
+    fix_summary: string | null;
+    created_at: string;
+  }> = [];
 
   for (const cmd of failed) {
     if (!cmd.stderr_output) continue;
@@ -29,8 +43,18 @@ export function handleFix(): void {
     const fix = lookupFix(cmd.stderr_output);
     if (!fix || !fix.fixCommand) continue;
 
-    foundFixes = true;
     const errorMsg = extractErrorMessage(cmd.stderr_output);
+    fixes.push({
+      error: errorMsg,
+      command: cmd.raw_command,
+      fix_command: fix.fixCommand.raw_command,
+      confidence: fix.error.confidence,
+      occurrences: fix.error.occurrences,
+      fix_summary: fix.error.fix_summary,
+      created_at: cmd.created_at,
+    });
+
+    if (flags.json) continue;
 
     console.log(`  ${icons.cross} ${colors.error('Error:')} ${colors.dim(errorMsg.slice(0, 60))}`);
     console.log(`    ${colors.dim('Command:')} ${cmd.raw_command}`);
@@ -51,7 +75,21 @@ export function handleFix(): void {
     console.log('');
   }
 
-  if (!foundFixes) {
+  // JSON output for all cases
+  if (flags.json) {
+    outputJson(
+      fixes.length > 0
+        ? { fixes }
+        : { fixes: [], errors: failed.filter(c => c.stderr_output).map(c => ({
+            command: c.raw_command,
+            error: extractErrorMessage(c.stderr_output || ''),
+            created_at: c.created_at,
+          })) }
+    );
+    return;
+  }
+
+  if (fixes.length === 0) {
     console.log(colors.dim('  Recent errors found but no known fixes yet.'));
     console.log(colors.dim('  As you fix errors, Recall learns what works.'));
     console.log('');

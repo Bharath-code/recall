@@ -12,12 +12,14 @@ import {
   formatNoSearchResults,
   SPACING,
 } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
 export interface SearchFlags {
   repo?: string;
   since?: string;
   limit?: number;
   failedOnly?: boolean;
+  json?: boolean;
 }
 
 export function handleSearch(query: string, flags: SearchFlags): void {
@@ -43,6 +45,11 @@ export function handleSearch(query: string, flags: SearchFlags): void {
   } catch {
     // Fallback to LIKE search if FTS5 query syntax fails
     results = searchCommandsKeyword(query.trim(), limit);
+  }
+
+  if (flags.json) {
+    outputJson(results);
+    return;
   }
 
   if (results.length === 0) {

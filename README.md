@@ -5,7 +5,7 @@
 
 Recall is a **local-first** command memory for developers. It captures the commands you run (with context like repo + cwd), so you can **find the exact thing you did last time** and rebuild project context fast—without sending your history to the cloud.
 
-> Status: **dogfood MVP**. The zsh-first local capture/search loop is implemented for early Mac developer testing. Later features are gated behind `RECALL_EXPERIMENTAL=1`.
+> Status: **beta**. Core features (capture, search, project memory, tool rediscovery, AI search) are production-ready. Experimental features (workflow replay, background embedding) are gated behind `RECALL_EXPERIMENTAL=1`.
 
 ---
 
@@ -50,7 +50,7 @@ recall recent
 recall project
 ```
 
-Experimental commands are hidden unless you set `RECALL_EXPERIMENTAL=1`.
+All core commands are available by default. A few experimental features (workflow replay, background embedding daemon) remain behind `RECALL_EXPERIMENTAL=1`.
 
 ---
 
@@ -83,7 +83,7 @@ Shell history is personal. Recall is designed to earn trust first.
 
 - **Local-first storage**: commands live in a local SQLite DB (no cloud sync in early phases)
 - **No telemetry** by default (no tracking, no hidden network calls)
-- **AI disabled by default**: semantic search and embeddings are experimental and hidden unless `RECALL_EXPERIMENTAL=1`
+- **AI disabled by default**: semantic search (`recall ask`) requires opt-in through API keys or local models. No AI features run without explicit configuration.
 - **Hook install is two-mode**:
   - **Default: print-only** (Starship-style) — shows you the line to add to your shell rc
   - **Opt-in: `--auto`** — safe append-only install with idempotent detection (zinit pattern)

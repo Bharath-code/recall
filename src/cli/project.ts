@@ -10,6 +10,7 @@ import {
   getFailedCommandsByRepo,
 } from '../db/commands.ts';
 import { detectCommonWorkflows } from '../workflows/detector.ts';
+import { outputJson } from '../ui/json-output.ts';
 import { 
   colors, 
   formatHeader, 
@@ -22,7 +23,11 @@ import {
   formatSection,
 } from '../ui/index.ts';
 
-export async function handleProject(): Promise<void> {
+export interface ProjectFlags {
+  json?: boolean;
+}
+
+export async function handleProject(flags: ProjectFlags = {}): Promise<void> {
   const icons = getIcons();
   const cwd = process.cwd();
   const repoCtx = await getRepoContext(cwd);
@@ -43,6 +48,18 @@ export async function handleProject(): Promise<void> {
 
   const successfulCmds = getSuccessfulCommandsByRepo(repoCtx.hash, 10);
   const failedCmds = getFailedCommandsByRepo(repoCtx.hash, 5);
+
+  if (flags.json) {
+    outputJson({
+      repo: repoCtx,
+      recent_commands: recentCmds,
+      startup_commands: startupCmds,
+      workflows,
+      failed_commands: failedCmds,
+      successful_commands: successfulCmds,
+    });
+    return;
+  }
 
   console.log(formatHeader(`${icons.dir} recall project`));
   console.log('');

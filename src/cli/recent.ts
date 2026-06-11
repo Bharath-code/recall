@@ -11,11 +11,13 @@ import {
   formatNoCommandsFound,
   SPACING,
 } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
 export interface RecentFlags {
   limit?: number;
   repo?: string;
   all?: boolean;
+  json?: boolean;
 }
 
 export function handleRecent(flags: RecentFlags): void {
@@ -27,6 +29,11 @@ export function handleRecent(flags: RecentFlags): void {
     repo_path_hash: flags.repo,
     includeImported: flags.all,
   });
+
+  if (flags.json) {
+    outputJson(commands);
+    return;
+  }
 
   if (commands.length === 0) {
     const emptyState = formatNoCommandsFound();

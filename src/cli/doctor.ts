@@ -11,6 +11,7 @@ import { getErrorCount, getFixedErrorCount } from '../db/errors.ts';
 import { detectShell, getShellRcPath, isHookInstalledAsync } from '../hooks/detect.ts';
 import { resolveAIConfig } from '../ai/adapter.ts';
 import { isCaptureEnabled, shouldRedactSecrets, getIgnoredPatterns } from '../config/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 import { 
   colors, 
   formatHeader, 
@@ -20,7 +21,11 @@ import {
   formatKeyValueTable,
 } from '../ui/index.ts';
 
-export async function handleDoctor(): Promise<void> {
+export interface DoctorFlags {
+  json?: boolean;
+}
+
+export async function handleDoctor(flags: DoctorFlags = {}): Promise<void> {
   const icons = getIcons();
   let issues = 0;
 
@@ -56,10 +61,11 @@ export async function handleDoctor(): Promise<void> {
   const shell = detectShell();
   console.log(`${SPACING.indent}${icons.cmd} Shell: ${shell}`);
 
+  let hookInstalled = false;
   if (shell !== 'unknown') {
     const rcPath = getShellRcPath(shell);
     if (rcPath) {
-      const hookInstalled = await isHookInstalledAsync(rcPath);
+      hookInstalled = await isHookInstalledAsync(rcPath);
       logCheck(`Shell hook installed (${rcPath})`, hookInstalled);
       if (!hookInstalled) issues++;
     }
@@ -70,12 +76,13 @@ export async function handleDoctor(): Promise<void> {
 
   // Check 5: Data stats
   console.log(formatSection('Statistics'));
+  let cmdCount = 0, repoCount = 0, toolCount = 0, errorCount = 0, fixedCount = 0;
   try {
-    const cmdCount = getCommandCount();
-    const repoCount = getRepoCount();
-    const toolCount = getToolCount();
-    const errorCount = getErrorCount();
-    const fixedCount = getFixedErrorCount();
+    cmdCount = getCommandCount();
+    repoCount = getRepoCount();
+    toolCount = getToolCount();
+    errorCount = getErrorCount();
+    fixedCount = getFixedErrorCount();
 
     const stats = formatKeyValueTable({
       'Commands': String(cmdCount),
@@ -122,6 +129,29 @@ export async function handleDoctor(): Promise<void> {
     }
   } else {
     console.log(`${SPACING.indent}${icons.cmd} No ignored patterns`);
+  }
+
+  // JSON output
+  if (flags.json) {
+    outputJson({
+      healthy: issues === 0,
+      issues,
+      checks: {
+        binary: binaryFound,
+        database: dbExists,
+        data_directory: dirExists,
+        shell_hook: hookInstalled,
+      },
+      stats: {
+        commands: cmdCount,
+        repos: repoCount,
+        tools: toolCount,
+        errors: errorCount,
+        fixes: fixedCount,
+      },
+      ai_provider: aiConfig.provider,
+    });
+    return;
   }
 
   // Summary

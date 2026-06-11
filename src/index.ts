@@ -45,6 +45,7 @@ cli
   .option('--since <date>', 'Filter commands since date (ISO)')
   .option('--limit <n>', 'Max results', { default: 20 })
   .option('--failed-only', 'Show only failed commands')
+  .option('--json', 'Output as JSON')
   .action(async (query, flags) => {
     applyIconSetting(flags);
     const { handleSearch } = await import('./cli/search.ts');
@@ -57,6 +58,7 @@ cli
   .option('--limit <n>', 'Number of commands to show', { default: 20 })
   .option('--repo <hash>', 'Filter by repo')
   .option('--all', 'Include imported shell history')
+  .option('--json', 'Output as JSON')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleRecent } = await import('./cli/recent.ts');
@@ -66,19 +68,21 @@ cli
 // ─── recall project ──────────────────────────────────
 cli
   .command('project', 'Show current project context')
+  .option('--json', 'Output as JSON')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleProject } = await import('./cli/project.ts');
-    await handleProject();
+    await handleProject(flags);
   });
 
 // ─── recall doctor ───────────────────────────────────
 cli
   .command('doctor', 'Diagnose installation health')
+  .option('--json', 'Output as JSON')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleDoctor } = await import('./cli/doctor.ts');
-    await handleDoctor();
+    await handleDoctor(flags);
   });
 
 // ─── recall config ───────────────────────────────────
@@ -88,6 +92,7 @@ cli
   .option('--set <key=value>', 'Set a config value')
   .option('--list', 'List all config values')
   .option('--reset', 'Reset config to defaults')
+  .option('--json', 'Output as JSON')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleConfig } = await import('./cli/config.ts');
@@ -180,19 +185,21 @@ cli
 // ─── recall digest ───────────────────────────────────
 cli
   .command('digest', 'Weekly summary of your terminal activity')
+  .option('--json', 'Output as JSON')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleDigest } = await import('./cli/digest.ts');
-    handleDigest();
+    handleDigest(flags);
   });
 
 // ─── recall workflows ────────────────────────────────
 cli
   .command('workflows', 'Detect and list repeated command sequences')
+  .option('--json', 'Output as JSON')
   .action(async (flags) => {
     applyIconSetting(flags);
     const { handleWorkflows } = await import('./cli/workflows.ts');
-    handleWorkflows();
+    handleWorkflows(flags);
   });
 
 // ─── recall restore ──────────────────────────────────
@@ -221,25 +228,37 @@ cli
     await handleHookAction(action, flags);
   });
 
+// ─── recall ask "<question>" ───────────────────────────
+cli
+  .command('ask <query>', 'AI-powered semantic search over your command history')
+  .option('--json', 'Output as JSON')
+  .action(async (query, flags) => {
+    applyIconSetting(flags);
+    const { handleAsk } = await import('./cli/ask.ts');
+    await handleAsk(query, flags);
+  });
+
+// ─── recall fix ──────────────────────────────────────
+cli
+  .command('fix', 'Show known fixes for recent errors')
+  .option('--json', 'Output as JSON')
+  .action(async (flags) => {
+    applyIconSetting(flags);
+    const { handleFix } = await import('./cli/fix.ts');
+    handleFix(flags);
+  });
+
+// ─── recall forgotten-tools ──────────────────────────
+cli
+  .command('forgotten-tools', 'Show installed but unused tools')
+  .option('--json', 'Output as JSON')
+  .action(async (flags) => {
+    applyIconSetting(flags);
+    const { handleForgottenTools } = await import('./cli/forgotten-tools.ts');
+    handleForgottenTools(flags);
+  });
+
 if (experimentalEnabled) {
-  // ─── recall ask "<question>" ───────────────────────
-  cli
-    .command('ask <query>', 'Experimental: AI-powered semantic search')
-    .action(async (query, flags) => {
-      applyIconSetting(flags);
-      const { handleAsk } = await import('./cli/ask.ts');
-      await handleAsk(query);
-    });
-
-  // ─── recall fix ────────────────────────────────────
-  cli
-    .command('fix', 'Experimental: show known fixes for recent errors')
-    .action(async (flags) => {
-      applyIconSetting(flags);
-      const { handleFix } = await import('./cli/fix.ts');
-      handleFix();
-    });
-
   // ─── recall replay ─────────────────────────────────
   cli
     .command('replay', 'Experimental: replay startup workflow for current project')
@@ -249,15 +268,6 @@ if (experimentalEnabled) {
       applyIconSetting(flags);
       const { handleReplay } = await import('./cli/replay.ts');
       await handleReplay(flags);
-    });
-
-  // ─── recall forgotten-tools ────────────────────────
-  cli
-    .command('forgotten-tools', 'Experimental: show installed but unused tools')
-    .action(async (flags) => {
-      applyIconSetting(flags);
-      const { handleForgottenTools } = await import('./cli/forgotten-tools.ts');
-      handleForgottenTools();
     });
 
   // ─── recall embed (internal) ───────────────────────

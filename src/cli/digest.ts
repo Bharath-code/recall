@@ -7,8 +7,13 @@ import { getDormantTools } from '../db/tools.ts';
 import { getRecentErrorsSince } from '../db/errors.ts';
 import { updateConfig, getConfig } from '../config/index.ts';
 import { colors, formatHeader, getIcons, SPACING, formatSection } from '../ui/index.ts';
+import { outputJson } from '../ui/json-output.ts';
 
-export function handleDigest(): void {
+export interface DigestFlags {
+  json?: boolean;
+}
+
+export function handleDigest(flags: DigestFlags = {}): void {
   const icons = getIcons();
 
   console.log(formatHeader(`${icons.brain} recall digest`));
@@ -62,8 +67,20 @@ export function handleDigest(): void {
   console.log('');
 
   // ─── Update last digest timestamp ───────────────────────────────────────────
+  // Always update regardless of output format to prevent stale digests
   const lastDigest = getConfig('last_digest_at');
   updateConfig({ last_digest_at: new Date().toISOString() });
+
+  // JSON output
+  if (flags.json) {
+    outputJson({
+      top_commands: topCommands,
+      dormant_tools: dormant,
+      repeated_errors: painPoints,
+      last_digest_at: lastDigest,
+    });
+    return;
+  }
 
   if (lastDigest) {
     const daysSince = Math.floor((Date.now() - new Date(lastDigest).getTime()) / (1000 * 60 * 60 * 24));
