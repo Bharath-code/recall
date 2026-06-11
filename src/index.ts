@@ -258,6 +258,18 @@ cli
     handleForgottenTools(flags);
   });
 
+// ─── recall session ────────────────────────────────
+cli
+  .command('session', 'Show session timeline view')
+  .option('--limit <n>', 'Number of sessions to show', { default: 10 })
+  .option('--repo <hash>', 'Filter by repo')
+  .option('--json', 'Output as JSON')
+  .action(async (flags) => {
+    applyIconSetting(flags);
+    const { handleSession } = await import('./cli/session.ts');
+    handleSession(flags);
+  });
+
 // ─── recall mcp ────────────────────────────────────
 cli
   .command('mcp', 'Start MCP server for AI tool integration (Claude Code, Cursor)')

@@ -221,9 +221,9 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 
 | Metric | Before | After | Delta |
 |--------|--------|-------|-------|
-| Tests | 93 | 137 | +44 |
-| Files | 11 | 15 | +4 |
-| Expect calls | 184 | 274 | +90 |
+| Tests | 93 | 151 | +58 |
+| Files | 11 | 16 | +5 |
+| Expect calls | 184 | 316 | +132 |
 
 ### 6.2 New Test Files
 
@@ -233,6 +233,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 | `tests/cli/workflows.test.ts` | 5 | Empty state, detection, restore by ID, missing ID, not found |
 | `tests/tools/scanner.test.ts` | 8 | All 8 scanners (brew, npm, cargo, pip, gem, go, pnpm, yarn) |
 | `tests/insights/index.test.ts` | 29 | Tool alternative word-boundary, forgotten tool age/usage, frequency, e2e priority ordering |
+| `tests/cli/session.test.ts` | 14 | getRecentSessions grouping/filtering/metadata, CLI empty/grouped/JSON/--repo |
 
 ### 6.3 Improved Tests
 
@@ -258,6 +259,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/cli/digest.ts`
 - `src/cli/workflows.ts`
 - `src/cli/restore.ts`
+- `src/cli/session.ts`
 - `src/db/workflows.ts`
 - `src/mcp/index.ts`
 - `src/mcp/binary.ts`
@@ -272,12 +274,13 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `scripts/test-promoted.sh`
 - `tests/cli/digest.test.ts`
 - `tests/cli/workflows.test.ts`
+- `tests/cli/session.test.ts`
 - `tests/insights/index.test.ts`
 - `tests/tools/scanner.test.ts`
 - `bun-api-migration-plan.md`
 
 ### Modified Files (production code)
-- `src/index.ts` — registered digest, workflows, restore, mcp; promoted ask/fix/forgotten-tools; added --json flags
+- `src/index.ts` — registered digest, workflows, restore, mcp, session; promoted ask/fix/forgotten-tools; added --json flags
 - `src/cli/doctor.ts` — `Bun.which()`, `--json` flag, insight section, insight in JSON output
 - `src/cli/init.ts` — `Bun.file().text()`, updated init wizard for promoted commands, first-run value bomb insight
 - `src/cli/hook.ts` — decomposed into helpers; added `handleHookCd()` for auto-cd
@@ -299,7 +302,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/hooks/zsh-snippet.ts` — added `chpwd` hook for auto-cd
 - `src/hooks/bash-snippet.ts` — added `cd()` override for auto-cd
 - `src/db/index.ts` — singleton, migrations, `setDb()`
-- `src/db/commands.ts` — Zod schema, `withDbCatch()`, `getTopCommandsSince()`
+- `src/db/commands.ts` — Zod schema, `withDbCatch()`, `getTopCommandsSince()`, `getRecentSessions()`
 - `src/db/tools.ts` — expanded source union
 - `src/db/errors.ts` — `getRecentErrorsSince()`
 - `src/db/schema.sql` — workflows table, relaxed tools constraint
@@ -308,13 +311,14 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/ui/index.ts` — (re-export additions)
 - `README.md` — beta status, Homebrew install, promoted commands
 - `SPEC.md` — updated status and experimental commands list
-- `AGENTS.md` — updated experimental commands, Homebrew build note, MCP server docs
+- `AGENTS.md` — updated experimental commands, Homebrew build note, MCP server docs, added session to production commands
 
 ### Modified Files (tests)
 - `tests/db/commands.test.ts` — rewritten with seeded data
 - `tests/cli/core.test.ts` — fixed stale expectations
 - `tests/security/path-validation.test.ts` — (reference for path logic)
 - `tests/insights/index.test.ts` — (new) 29 tests covering all insight generators + e2e priority ordering
+- `tests/cli/session.test.ts` — (new) 14 tests covering DB function + CLI command
 
 ---
 
@@ -412,6 +416,7 @@ Every output-producing command now supports `--json` for programmatic use and MC
 | `doctor` | `{ healthy, issues, checks, stats, ai_provider, insight }` |
 | `config` | Full `RecallConfig` object |
 | `digest` | `{ top_commands, dormant_tools, repeated_errors }` |
+| `session` | `Session[]` — array of sessions with nested `commands` arrays |
 | `workflows` | `Workflow[]` — flat array |
 | `ask` | `{ results, search_method, ai_error }` |
 | `fix` | `{ fixes }` or `{ fixes, errors }` |
@@ -429,12 +434,13 @@ Also fixed a TypeScript error: removed dead `(provider as string) === 'ollama'` 
 ### 9.5 Integration Tests
 **File:** `scripts/test-promoted.sh` (new)
 
-13-test integration suite covering all promoted commands:
+14-test integration suite covering all promoted commands:
 - `forgotten-tools` (text + JSON)
 - `ask` keyword fallback (text + JSON)
 - `fix` with captured failures (text + JSON)
 - `--json` on `recent`, `search`, `project`, `doctor`
 - RECALL_EXPERIMENTAL gate removal verification
+- doctor --json includes `insight` field (section 5)
 
 ### 9.6 Status: Beta
 **Files:** `README.md`, `SPEC.md`
@@ -518,6 +524,36 @@ The insight engine now also fires in `recall doctor`, giving users ongoing value
      10x faster with better defaults
 ```
 
+### 9.10 Session Timeline (`recall session`)
+**Files:** `src/cli/session.ts` (new), `src/db/commands.ts`, `src/index.ts`
+
+Groups commands by `session_id` into a timeline view — showing what you did in each session, how long it lasted, and every command within it.
+
+**Usage:**
+```bash
+recall session                         # Last 10 sessions
+recall session --limit 5               # Last 5 sessions
+recall session --repo <hash>           # Sessions in a specific repo
+recall session --json                  # Machine-readable output
+```
+
+**Output example:**
+```
+Session Timeline
+──────────────────────────────────────────────────
+  Session #1 · 5 commands · 12m 30s · 2h ago
+  ──────────────────────────────────────────────
+    1. ⚡ git status            ~/project   2h ago ✓  15ms
+    2. ⚡ git add .             ~/project   2h ago ✓
+    3. ⚡ git commit -m "fix"   ~/project   2h ago ✓
+```
+
+**Implementation:**
+- New DB function `getRecentSessions(opts: { limit?, repo_path_hash? })` — groups by session_id, returns `command_count`, `started_at`, `ended_at`, `duration_seconds` using `julianday` arithmetic
+- Filters to `source = 'hook'` commands only, ignores `session_id IS NULL`
+- JSON output enriches each session with its full command list via `getCommandsBySession`
+- Uses `formatSeconds` for duration display and `formatRelativeTime` for session age
+
 ---
 
 ## Quick Reference: What You Can Do Now
@@ -537,6 +573,7 @@ recall forgotten-tools                   # Installed but unused tools
 recall digest                            # Weekly activity summary
 
 # Phase 3: Workflow Automation
+recall session                          # Session timeline view (add --json)
 recall workflows                         # Detect repeated sequences (add --json)
 recall restore --id 1                    # Replay a workflow
 

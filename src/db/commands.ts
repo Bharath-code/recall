@@ -340,6 +340,43 @@ export function getSessionsByRepo(repoPathHash: string): { session_id: string; c
   });
 }
 
+export function getRecentSessions(opts: {
+  limit?: number;
+  repo_path_hash?: string;
+} = {}): { session_id: string; command_count: number; started_at: string; ended_at: string; duration_seconds: number }[] {
+  return withDbCatch('get recent sessions', [], () => {
+    const { limit = 20, repo_path_hash } = opts;
+
+    let sql = `
+      SELECT
+        session_id,
+        COUNT(*) as command_count,
+        MIN(created_at) as started_at,
+        MAX(created_at) as ended_at,
+        ROUND((julianday(MAX(created_at)) - julianday(MIN(created_at))) * 86400) as duration_seconds
+      FROM commands
+      WHERE session_id IS NOT NULL AND source = 'hook'
+    `;
+    const params: (string | number)[] = [];
+
+    if (repo_path_hash) {
+      sql += ' AND repo_path_hash = ?';
+      params.push(repo_path_hash);
+    }
+
+    sql += ' GROUP BY session_id ORDER BY started_at DESC LIMIT ?';
+    params.push(limit);
+
+    return db().prepare(sql).all(...params) as {
+      session_id: string;
+      command_count: number;
+      started_at: string;
+      ended_at: string;
+      duration_seconds: number;
+    }[];
+  });
+}
+
 export function getStartupCommands(repoPathHash: string, limit: number = 5): Command[] {
   return withDbCatch('get startup commands', [], () => {
     // Single query to get first N commands from each session using ROW_NUMBER

@@ -70,7 +70,7 @@ Build quirks:
 
 - Registers commands with CAC; lazy-loads handlers via dynamic `import()`.
 - Global `--no-icons` flag; respects `NO_COLOR`.
-- Production commands: `ask`, `fix`, `forgotten-tools`, `digest`, `workflows`, `restore`, etc.
+- Production commands: `ask`, `fix`, `forgotten-tools`, `session`, `digest`, `workflows`, `restore`, etc.
 - Experimental commands are hidden unless `RECALL_EXPERIMENTAL=1` is set:
   - `replay`, `embed`
 

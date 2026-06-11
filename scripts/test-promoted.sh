@@ -41,7 +41,7 @@ echo ""
 echo "  [setup] Capturing sample commands..."
 
 # Successful commands
-for cmd in "npm run dev" "git status" "npm test" "bun run build" "docker ps" "git commit"; do
+for cmd in "npm run dev" "git status" "npm test" "bun run build" "docker ps" "git commit" "ls -la"; do
   id="$($RECALL hook capture --raw-command "$cmd" --cwd "$PROJECT_DIR" --shell zsh --session-id "test-session")"
   $RECALL hook update --command-id "$id" --exit-code 0 --duration-ms 15 >/dev/null
 done
@@ -158,7 +158,37 @@ fi
 
 # ──────────────────────────────────────────────────────────────────────────
 echo ""
-echo "── 5. RECALL_EXPERIMENTAL is NOT required ──────────────────────────"
+echo "── 5. doctor --json includes insight field ────────────────────────"
+
+# The previous captures include 'ls -la', so the insight engine can match
+# 'ls' → 'eza' if eza is in the dormant tools.  We inject it directly.
+if command -v sqlite3 &>/dev/null; then
+  DB="$TMP_HOME/.recall/recall.db"
+  if [[ -f "$DB" ]]; then
+    sqlite3 "$DB" "INSERT OR IGNORE INTO tools (tool_name, source, installed_at, usage_count) VALUES ('eza', 'manual', '2026-01-01T00:00:00Z', 0);" 2>/dev/null || true
+    $RECALL doctor --json > "$OUT" 2>&1
+    if grep -q '"insight"' "$OUT"; then
+      pass "doctor --json includes insight field"
+      # Extract the insight text for display (cosmetic, || true for set -e safety)
+      INSIGHT_TEXT=$(grep -o '"insight":{[^}]*}' "$OUT" | grep -o '"text":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+      if [[ -n "$INSIGHT_TEXT" ]]; then
+        echo "        ↳ $INSIGHT_TEXT"
+      fi
+    else
+      fail "doctor --json missing insight field"
+      head -3 "$OUT"
+    fi
+  else
+    # No DB — that's fine, test is N/A for this scenario
+    echo "  ⏭️  SKIP: doctor --json insight (no DB found)"
+  fi
+else
+  echo "  ⏭️  SKIP: doctor --json insight (sqlite3 not available)"
+fi
+
+# ──────────────────────────────────────────────────────────────────────────
+echo ""
+echo "── 6. RECALL_EXPERIMENTAL is NOT required ──────────────────────────"
 
 # Direct check: these commands should NOT error with "not found"
 for cmd in "forgotten-tools" "ask" "fix"; do
