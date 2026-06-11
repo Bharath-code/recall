@@ -1,96 +1,494 @@
 <section class="py-24 px-4 border-t border-slate/50">
   <div class="max-w-6xl mx-auto">
-    <div class="text-center mb-16">
+    <!-- ─── Header ─── -->
+    <div class="text-center mb-12">
       <h2 class="text-3xl sm:text-4xl font-bold font-mono text-cloud mb-4 text-balance reveal">
-        Why developers choose Recall
+        Recall vs Atuin vs <code class="text-mint">fzf</code>
       </h2>
       <p class="text-dust text-lg max-w-2xl mx-auto text-pretty reveal">
-        If you just need fuzzy string search, existing tools are already excellent.
-        If you need <span class="text-cyan">project memory</span>, Recall is the bet.
+        Three different approaches to command history. Here's how they compare.
       </p>
     </div>
 
-    <div class="overflow-x-auto reveal">
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="border-b border-slate">
-            <th class="py-4 pr-4 text-sm font-mono font-semibold text-dust">Feature</th>
-            <th class="py-4 px-4 text-sm font-mono font-semibold text-cyan text-center">Recall</th>
-            <th class="py-4 px-4 text-sm font-mono font-semibold text-dust text-center">history | fzf</th>
-            <th class="py-4 px-4 text-sm font-mono font-semibold text-dust text-center">Atuin</th>
-            <th class="py-4 pl-4 text-sm font-mono font-semibold text-dust text-center">Notes / Docs</th>
-          </tr>
-        </thead>
-        <tbody class="text-sm">
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Fuzzy search</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-mint">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-mint">✓</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-dust">—</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Repo-aware context</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-dust">~</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-dust">~</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Project startup patterns</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-ember">✗</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Exit code & duration tracking</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-mint">✓</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-ember">✗</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Local-first by default</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-mint">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-dust">~</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-mint">✓</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">No account required</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-mint">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-dust">~</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-mint">✓</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Workflow detection & replay</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-ember">✗</span></td>
-          </tr>
-          <tr class="border-b border-slate/30">
-            <td class="py-4 pr-4 text-cloud font-mono">Weekly activity digest</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-ember">✗</span></td>
-          </tr>
-          <tr>
-            <td class="py-4 pr-4 text-cloud font-mono">Forgotten tool suggestions</td>
-            <td class="py-4 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 px-4 text-center"><span class="text-ember">✗</span></td>
-            <td class="py-4 pl-4 text-center"><span class="text-ember">✗</span></td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- ─── TL;DR ─── -->
+    <div class="bg-slate/20 border border-slate rounded-2xl p-6 md:p-8 mb-16 reveal">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-8 h-8 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">⚡</span>
+        <h3 class="text-lg font-bold font-mono text-cloud">TL;DR</h3>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <h4 class="text-cyan font-bold font-mono text-sm mb-2">Recall</h4>
+          <p class="text-dust text-sm leading-relaxed">
+            <strong class="text-cloud">Project memory for your terminal.</strong> Goes beyond search — it knows what repo you're in, surfaces startup patterns, detects workflows, auto-learns from failures. Local-first, zero accounts, single SQLite file.
+          </p>
+        </div>
+        <div>
+          <h4 class="text-dust font-bold font-mono text-sm mb-2">Atuin</h4>
+          <p class="text-dust text-sm leading-relaxed">
+            <strong class="text-cloud">Synced shell history.</strong> Replaces your shell's history with a SQLite-backed database. First-class encrypted sync across machines. Excellent for users who work on multiple computers.
+          </p>
+        </div>
+        <div>
+          <h4 class="text-dust font-bold font-mono text-sm mb-2">fzf</h4>
+          <p class="text-dust text-sm leading-relaxed">
+            <strong class="text-cloud">General-purpose fuzzy finder.</strong> An agnostic filter that happens to work great with history. No metadata, no persistence, no repo awareness — just fast fuzzy matching on raw strings.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <p class="text-center text-dust/60 text-xs font-mono mt-6 reveal">
-      ✓ = fully supported &nbsp; ~ = partial &nbsp; ✗ = not supported
-    </p>
+    <!-- ─── Feature Comparison Table ─── -->
+    <div class="mb-16 reveal">
+      <h3 class="text-xl font-bold font-mono text-cloud mb-6">Feature comparison</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate">
+              <th class="py-4 pr-4 font-mono font-semibold text-dust w-[30%]">Feature</th>
+              <th class="py-4 px-4 font-mono font-semibold text-cyan text-center w-[23%]">Recall</th>
+              <th class="py-4 px-4 font-mono font-semibold text-dust text-center w-[23%]">Atuin</th>
+              <th class="py-4 pl-4 font-mono font-semibold text-dust text-center w-[23%]">fzf + history</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Search & Retrieval -->
+            <tr class="border-b border-slate/30">
+              <td colspan="4" class="py-3 text-xs font-mono font-semibold text-dust/60 uppercase tracking-wider">Search &amp; Retrieval</td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Fuzzy search</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-mint font-bold">✓</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Full-text search (FTS)</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Search by exit code / duration</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Interactive picker (Ctrl+R)</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-mint font-bold">✓</span></td>
+            </tr>
+
+            <!-- Context & Memory -->
+            <tr class="border-b border-slate/30">
+              <td colspan="4" class="py-3 text-xs font-mono font-semibold text-dust/60 uppercase tracking-wider pt-6">Context &amp; Memory</td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Repo-aware by directory</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-dust">~</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Project startup patterns</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Session grouping</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-dust">~</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Workflow detection</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Failed command auto-learning</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+
+            <!-- Data & Sync -->
+            <tr class="border-b border-slate/30">
+              <td colspan="4" class="py-3 text-xs font-mono font-semibold text-dust/60 uppercase tracking-wider pt-6">Data &amp; Sync</td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Local-first by design</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-mint">✓</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Cross-machine sync</td>
+              <td class="py-3 px-4 text-center"><span class="text-dust">—</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">End-to-end encryption</td>
+              <td class="py-3 px-4 text-center"><span class="text-dust">N/A</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-dust">N/A</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Self-hostable server</td>
+              <td class="py-3 px-4 text-center"><span class="text-dust">N/A</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-dust">N/A</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">0 accounts required</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-dust">~</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-mint font-bold">✓</span></td>
+            </tr>
+
+            <!-- Intelligence -->
+            <tr class="border-b border-slate/30">
+              <td colspan="4" class="py-3 text-xs font-mono font-semibold text-dust/60 uppercase tracking-wider pt-6">Intelligence</td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Weekly activity digest</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Forgotten tool suggestions</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Semantic AI search (opt-in)</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Error fix suggestions</td>
+              <td class="py-3 px-4 text-center"><span class="text-mint font-bold">✓</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-ember">✗</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-ember">✗</span></td>
+            </tr>
+
+            <!-- Technical -->
+            <tr class="border-b border-slate/30">
+              <td colspan="4" class="py-3 text-xs font-mono font-semibold text-dust/60 uppercase tracking-wider pt-6">Technical</td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Backend</td>
+              <td class="py-3 px-4 text-center"><span class="text-cloud font-mono text-xs">Bun SQLite</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-cloud font-mono text-xs">Rust + SQLite</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-cloud font-mono text-xs">Go (no persistence)</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Shell support</td>
+              <td class="py-3 px-4 text-center"><span class="text-cloud font-mono text-xs">zsh, bash</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-cloud font-mono text-xs">zsh, bash, fish</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-cloud font-mono text-xs">All (agnostic)</span></td>
+            </tr>
+            <tr class="border-b border-slate/20">
+              <td class="py-3 pr-4 text-cloud font-mono">Install</td>
+              <td class="py-3 px-4 text-center"><span class="text-cloud font-mono text-xs">Homebrew / source</span></td>
+              <td class="py-3 px-4 text-center"><span class="text-cloud font-mono text-xs">Homebrew / cargo / binary</span></td>
+              <td class="py-3 pl-4 text-center"><span class="text-cloud font-mono text-xs">Homebrew / git / binary</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-center text-dust/60 text-xs font-mono mt-6">
+        ✓ = fully supported &nbsp; ~ = partial &nbsp; ✗ = not supported
+      </p>
+    </div>
+
+    <!-- ─── Scenario Cards ─── -->
+    <div class="mb-16 reveal">
+      <h3 class="text-xl font-bold font-mono text-cloud mb-6">How they handle real scenarios</h3>
+      <div class="grid md:grid-cols-3 gap-5 stagger-children">
+
+        <!-- Scenario 1 -->
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🔁</span>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cloud">Switching repos</h4>
+              <p class="text-[11px] font-mono text-dust/60">You work across 5 projects daily</p>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-cyan">Recall:</strong> Filters by repo automatically. <code class="text-cloud text-[10px]">recall search --repo</code> scopes to current project.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-dust">Atuin:</strong> Stores directory but no repo grouping. Search includes all directories.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-dust">fzf:</strong> Raw history file — no directory or repo context at all.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Scenario 2 -->
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🐛</span>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cloud">Debugging</h4>
+              <p class="text-[11px] font-mono text-dust/60">A command failed. Why?</p>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-cyan">Recall:</strong> Shows exit codes, auto-records errors, suggests fixes from past sessions. <code class="text-cloud text-[10px]">recall search --failed-only</code>.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-dust">Atuin:</strong> Stores exit code and duration. You can filter by failed commands manually.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">fzf:</strong> No exit codes or metadata. The raw history line doesn't tell you if it worked.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Scenario 3 -->
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center text-lg">💻</span>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cloud">Multiple machines</h4>
+              <p class="text-[11px] font-mono text-dust/60">Work across laptop + desktop</p>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">Recall:</strong> No sync yet. Each machine has its own SQLite file.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-mint">Atuin:</strong> Best-in-class encrypted sync. Self-host or use their server. Your history everywhere.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">fzf:</strong> No sync. Each machine's history is isolated.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Scenario 4 -->
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🆕</span>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cloud">Onboarding to a repo</h4>
+              <p class="text-[11px] font-mono text-dust/60">\"How do we run this project?\"</p>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-cyan">Recall:</strong> <code class="text-cloud text-[10px]">recall project</code> shows startup commands, runbook snippet, and most-used patterns.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">Atuin:</strong> Lists commands by directory, but no project-level aggregation or startup detection.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">fzf:</strong> Raw history search. You'd need to remember or guess the startup commands.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Scenario 5 -->
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🔄</span>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cloud">Repeated workflow</h4>
+              <p class="text-[11px] font-mono text-dust/60">I always run the same 3 commands</p>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-cyan">Recall:</strong> Auto-detects repeated sequences. <code class="text-cloud text-[10px]">recall workflows</code> shows them. <code class="text-cloud text-[10px]">recall restore --id 1</code> replays.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">Atuin:</strong> No workflow detection. You'd search each command individually.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-ember mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-ember">fzf:</strong> Ctrl+R for each command. No notion of sequences.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Scenario 6 -->
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🔒</span>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cloud">Privacy-first setup</h4>
+              <p class="text-[11px] font-mono text-dust/60">Nothing leaves my machine</p>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-cyan">Recall:</strong> Zero network calls, zero accounts, zero telemetry. Data stays in one SQLite file on your machine.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-mint">Atuin:</strong> Local-first with optional encrypted sync. Self-hostable server for full control.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-mint mt-0.5 shrink-0">▶</span>
+              <span><strong class="text-mint">fzf:</strong> No network at all. It reads your existing history file.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─── Who Should Use What ─── -->
+    <div class="mb-16 reveal">
+      <h3 class="text-xl font-bold font-mono text-cloud mb-6">Which tool fits your workflow?</h3>
+      <div class="grid md:grid-cols-3 gap-5 stagger-children">
+
+        <div class="p-6 bg-slate/20 border border-cyan/30 rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg shrink-0">🎯</div>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-cyan">Choose Recall if...</h4>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs text-dust">
+            <li class="flex items-start gap-2">
+              <span class="text-cyan mt-1 shrink-0">•</span>
+              <span>You want more than search — project memory, workflow detection, failure insights</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-cyan mt-1 shrink-0">•</span>
+              <span>You work across many repos and need context-aware results</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-cyan mt-1 shrink-0">•</span>
+              <span>You want zero-data sharing — no account, no cloud, no telemetry</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-cyan mt-1 shrink-0">•</span>
+              <span>You want to onboard to new projects faster with <code class="text-cloud text-[10px]">recall project</code></span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-slate/30 flex items-center justify-center text-lg shrink-0">🎯</div>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-dust">Choose Atuin if...</h4>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs text-dust">
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You work across multiple machines and want synced history</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You need end-to-end encrypted sync with self-hosting options</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You use fish shell (Atuin has first-class fish support)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You want a mature, battle-tested Rust-based CLI</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="p-6 bg-slate/20 border border-slate rounded-2xl reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-slate/30 flex items-center justify-center text-lg shrink-0">🎯</div>
+            <div>
+              <h4 class="text-sm font-bold font-mono text-dust">Choose fzf if...</h4>
+            </div>
+          </div>
+          <ul class="space-y-2 text-xs text-dust">
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You need a general-purpose fuzzy finder (files, processes, git branches — not just history)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You want minimal overhead — a single Go binary with no background process</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You value composability — pipe anything into fzf for instant filtering</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-dust mt-1 shrink-0">•</span>
+              <span>You don't need metadata or persistence for your history search</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─── Architecture Comparison ─── -->
+    <div class="bg-slate/20 border border-slate rounded-2xl p-6 md:p-8 reveal">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🏗️</span>
+        <h3 class="text-lg font-bold font-mono text-cloud">How they work</h3>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <h4 class="text-cyan font-bold font-mono text-sm mb-3">Recall</h4>
+          <div class="space-y-2 text-xs text-dust">
+            <p><span class="text-cloud">Shell hook</span> captures every command with repo, cwd, exit code, duration → writes to local <span class="text-cloud">SQLite</span> via <span class="text-cloud">Bun</span>.</p>
+            <p>Commands are searchable immediately via <span class="text-cloud">FTS5</span>. Projects are detected via <span class="text-cloud">git repo hash</span>. Workflows are mined from session groupings.</p>
+            <p class="text-dust/60 mt-2">Zero network calls. One file at <code class="text-cloud text-[10px]">~/.recall/recall.db</code>.</p>
+          </div>
+        </div>
+        <div>
+          <h4 class="text-dust font-bold font-mono text-sm mb-3">Atuin</h4>
+          <div class="space-y-2 text-xs text-dust">
+            <p><span class="text-cloud">Shell hook</span> (Rust) captures command + metadata → writes to local <span class="text-cloud">SQLite</span>.</p>
+            <p>Optionally syncs to a <span class="text-cloud">server</span> (self-hosted or cloud) with <span class="text-cloud">client-side encryption</span>. History is available on any connected machine.</p>
+            <p class="text-dust/60 mt-2">Database at <code class="text-cloud text-[10px]">~/.local/share/atuin/</code>. Sync requires a server or their hosted service.</p>
+          </div>
+        </div>
+        <div>
+          <h4 class="text-dust font-bold font-mono text-sm mb-3">fzf</h4>
+          <div class="space-y-2 text-xs text-dust">
+            <p><span class="text-cloud">No daemon, no persistence.</span> Reads <span class="text-cloud">stdin</span> and returns a selection. For history, it reads your shell's <span class="text-cloud">HISTFILE</span> directly.</p>
+            <p>No metadata, no database, no background process. The shell integration is a shell function that pipes the history file into fzf's filter.</p>
+            <p class="text-dust/60 mt-2">Depends entirely on your shell's history mechanism. What the shell saves, fzf can search.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>

@@ -642,6 +642,48 @@ Session Timeline
 
 ---
 
+### 9.13 Launch Assets (P4.1)
+**Files:** `scripts/demo-dogfood.sh` (new), `scripts/generate-walkthrough.sh` (new), `launch-assets/walkthrough.md` (generated), `landing/src/components/Hero.astro`
+
+Three launch-ready assets for Product Hunt, demo recordings, and marketing materials:
+
+**1. Enhanced Demo Script (`scripts/demo-dogfood.sh`)**
+
+Comprehensive, self-contained demo that exercises all major Recall features in a realistic dev workflow:
+- **Session A: Fixing a bug** — 10 commands (checkout → install → grep → vim → test → commit → push → force push)
+- **Session B: Docker setup** — 4 commands with auto-learned fix pattern (docker compose fails → pull → retry succeeds)
+- **Session C: Project setup** — 4 commands (cd → install → dev → curl)
+
+Features:
+- Isolated temp environment (`mktemp -d`) — no side effects on the user's Recall data
+- Two modes: standard (`bash scripts/demo-dogfood.sh`) and annotated walkthrough (`--walkthrough`)
+- `RECALL_USE_BIN=1` flag for testing the compiled binary
+- Cleanup via `trap EXIT`
+
+**2. Walkthrough Generator (`scripts/generate-walkthrough.sh`)**
+
+Captures live terminal output for every major command into a documentation-ready markdown file:
+- Seeds data via the demo script, then runs and captures output for: `init --help`, `search`, `search --failed-only`, `recent`, `project`, `session`, `doctor`, `--json`
+- Output: `launch-assets/walkthrough.md` (237 lines of captured output)
+- Ready for conversion to SVG/GIF via `svg-term-cli`
+
+**3. Landing Page Hero Update**
+
+Replaced static terminal demo lines with a richer story-driven workflow that shows session context:
+- `recall recent` — real output format with exit codes and duration
+- `recall search --failed-only` — shows auto-learned fix suggestion
+- `recall session` — full 8-command session timeline with repo/cwd/duration per command
+- `recall project` — startup patterns and runbook snippet
+
+**Usage:**
+```bash
+bash scripts/demo-dogfood.sh                   # Run full demo
+bash scripts/demo-dogfood.sh --walkthrough     # Annotated mode
+bash scripts/generate-walkthrough.sh           # Generate walkthrough.md
+```
+
+---
+
 ## Quick Reference: What You Can Do Now
 
 ```bash
