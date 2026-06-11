@@ -55,15 +55,18 @@ export interface Insight {
  * Find tool alternatives: user has a modern tool installed but still uses
  * the old one in their history.
  */
-function findToolAlternativeInsights(
+export function findToolAlternativeInsights(
   recentCommands: string[],
   dormant: Tool[],
 ): Insight[] {
   const results: Insight[] = [];
 
   for (const alt of TOOL_ALTERNATIVES) {
-    // Check if user IS using the old tool (substring match, e.g. 'diff' in 'git diff')
-    const usesOld = recentCommands.some(cmd => cmd.includes(alt.oldTool));
+    // Check if user IS using the old tool (word-boundary match, not substring)
+    // e.g. matches `grep foo` but not `ripgrep foo`, `ps aux` but not `docker ps`
+    const usesOld = recentCommands.some(cmd =>
+      cmd.split(/\s+/).some(token => token === alt.oldTool)
+    );
     if (!usesOld) continue;
 
     // Check if the new tool is installed (in dormant tools or any scanned tool)
@@ -85,7 +88,7 @@ function findToolAlternativeInsights(
 /**
  * Find forgotten tools: tools installed long ago with zero/low usage.
  */
-function findForgottenToolInsights(dormant: Tool[]): Insight[] {
+export function findForgottenToolInsights(dormant: Tool[]): Insight[] {
   const results: Insight[] = [];
 
   for (const tool of dormant.slice(0, 3)) {
@@ -110,7 +113,7 @@ function findForgottenToolInsights(dormant: Tool[]): Insight[] {
 /**
  * Find frequency anomaly: commands run unusually often.
  */
-function findFrequencyInsights(): Insight[] {
+export function findFrequencyInsights(): Insight[] {
   const results: Insight[] = [];
 
   // Get top commands (all sources — includes imported history on first run)

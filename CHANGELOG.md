@@ -221,9 +221,9 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 
 | Metric | Before | After | Delta |
 |--------|--------|-------|-------|
-| Tests | 93 | 108 | +15 |
-| Files | 11 | 14 | +3 |
-| Expect calls | 184 | 217 | +33 |
+| Tests | 93 | 137 | +44 |
+| Files | 11 | 15 | +4 |
+| Expect calls | 184 | 274 | +90 |
 
 ### 6.2 New Test Files
 
@@ -232,6 +232,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 | `tests/cli/digest.test.ts` | 2 | Empty state, command surfacing |
 | `tests/cli/workflows.test.ts` | 5 | Empty state, detection, restore by ID, missing ID, not found |
 | `tests/tools/scanner.test.ts` | 8 | All 8 scanners (brew, npm, cargo, pip, gem, go, pnpm, yarn) |
+| `tests/insights/index.test.ts` | 29 | Tool alternative word-boundary, forgotten tool age/usage, frequency, e2e priority ordering |
 
 ### 6.3 Improved Tests
 
@@ -262,6 +263,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/mcp/binary.ts`
 - `src/cli/mcp.ts`
 - `src/hooks/cd-tracker.ts`
+- `src/insights/index.ts`
 - `src/ui/json-output.ts`
 - `homebrew/Formula/recall.rb`
 - `.github/workflows/release.yml`
@@ -270,13 +272,14 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `scripts/test-promoted.sh`
 - `tests/cli/digest.test.ts`
 - `tests/cli/workflows.test.ts`
+- `tests/insights/index.test.ts`
 - `tests/tools/scanner.test.ts`
 - `bun-api-migration-plan.md`
 
 ### Modified Files (production code)
-- `src/index.ts` — registered digest, workflows, restore; promoted ask/fix/forgotten-tools; added --json flags
-- `src/cli/doctor.ts` — `Bun.which()`, `--json` flag
-- `src/cli/init.ts` — `Bun.file().text()`, updated init wizard for promoted commands
+- `src/index.ts` — registered digest, workflows, restore, mcp; promoted ask/fix/forgotten-tools; added --json flags
+- `src/cli/doctor.ts` — `Bun.which()`, `--json` flag, insight section, insight in JSON output
+- `src/cli/init.ts` — `Bun.file().text()`, updated init wizard for promoted commands, first-run value bomb insight
 - `src/cli/hook.ts` — decomposed into helpers; added `handleHookCd()` for auto-cd
 - `src/cli/export.ts` — path validation
 - `src/cli/import.ts` — path validation
@@ -289,6 +292,9 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/cli/config.ts` — `--json` flag
 - `src/cli/digest.ts` — `--json` flag
 - `src/cli/workflows.ts` — `--json` flag
+- `src/insights/index.ts` — insight engine with 3 priority-tiered generators, word-boundary matching
+- `src/ui/colors.ts` — added `insight` highlight color (bold)
+- `src/ui/icons.ts` — added `bulb` icon (💡/`*`)
 - `src/hooks/detect.ts` — Bun-native file I/O
 - `src/hooks/zsh-snippet.ts` — added `chpwd` hook for auto-cd
 - `src/hooks/bash-snippet.ts` — added `cd()` override for auto-cd
@@ -308,6 +314,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `tests/db/commands.test.ts` — rewritten with seeded data
 - `tests/cli/core.test.ts` — fixed stale expectations
 - `tests/security/path-validation.test.ts` — (reference for path logic)
+- `tests/insights/index.test.ts` — (new) 29 tests covering all insight generators + e2e priority ordering
 
 ---
 
@@ -402,7 +409,7 @@ Every output-producing command now supports `--json` for programmatic use and MC
 | `search` | `Command[]` — flat array |
 | `recent` | `Command[]` — flat array |
 | `project` | `{ repo, recent_commands, startup_commands, workflows, failed_commands, successful_commands }` |
-| `doctor` | `{ healthy, issues, checks, stats, ai_provider }` |
+| `doctor` | `{ healthy, issues, checks, stats, ai_provider, insight }` |
 | `config` | Full `RecallConfig` object |
 | `digest` | `{ top_commands, dormant_tools, repeated_errors }` |
 | `workflows` | `Workflow[]` — flat array |
@@ -469,6 +476,46 @@ Recall now exposes its command memory as **MCP tools** for Claude Code, Cursor, 
     }
   }
 }
+```
+
+### 9.8 First-Run Value Bomb (`recall init`)
+**Files:** `src/insights/index.ts` (new), `src/cli/init.ts`, `src/ui/colors.ts`, `src/ui/icons.ts`
+
+After init imports shell history and scans installed tools, the user now sees a **surprising personal insight** — making the value of Recall immediately tangible.
+
+**Mechanism:**
+- Queries `getTopCommands` (all sources — includes imported history) + `getDormantTools` after setup
+- Runs 3 priority-tiered generators and returns the single highest-priority insight:
+  - **Priority 1 — Tool alternatives:** user has `ripgrep`/`fd`/`bat`/`eza`/`procs` installed but their history shows `grep`/`find`/`cat`/`ls`/`ps`
+  - **Priority 2 — Forgotten tools:** tools installed 30+ days ago with zero usage
+  - **Priority 3 — Frequency anomalies:** a command run 10+ times
+- Does **word-boundary token matching** (not substring) to avoid false positives like `ripgrep` matching `grep` or `psql` matching `ps`
+
+**Output example:**
+```
+  🔄 You have ripgrep (rg) installed but still use `grep`
+     10x faster with better defaults
+```
+
+**Graceful empty state:** If no history or tools are found, no insight is shown — the init flow proceeds normally.
+
+### 9.9 Doctor Insight (Ongoing Value)
+**Files:** `src/cli/doctor.ts`
+
+The insight engine now also fires in `recall doctor`, giving users ongoing value beyond first init.
+
+**Display:**
+- A new `Insights` section appears between Privacy Settings and Summary
+- Shows the same priority-tiered insight as init (tool alternative → forgotten tool → frequency anomaly)
+- **JSON output** adds an `insight: { text, tip }` field when available
+- Gracefully omitted when no insight is found — no empty section or stray `null` in JSON
+
+**What users see:**
+```
+  Insights
+  ──────────────────────────────────────────────────
+  💡 You have ripgrep (rg) installed but still use `grep`
+     10x faster with better defaults
 ```
 
 ---

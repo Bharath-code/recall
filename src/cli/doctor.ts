@@ -12,6 +12,7 @@ import { detectShell, getShellRcPath, isHookInstalledAsync } from '../hooks/dete
 import { resolveAIConfig } from '../ai/adapter.ts';
 import { isCaptureEnabled, shouldRedactSecrets, getIgnoredPatterns } from '../config/index.ts';
 import { outputJson } from '../ui/json-output.ts';
+import { generateFirstRunInsight } from '../insights/index.ts';
 import { 
   colors, 
   formatHeader, 
@@ -131,6 +132,9 @@ export async function handleDoctor(flags: DoctorFlags = {}): Promise<void> {
     console.log(`${SPACING.indent}${icons.cmd} No ignored patterns`);
   }
 
+  // Check 8: Insight
+  const insight = generateFirstRunInsight();
+
   // JSON output
   if (flags.json) {
     outputJson({
@@ -150,8 +154,20 @@ export async function handleDoctor(flags: DoctorFlags = {}): Promise<void> {
         fixes: fixedCount,
       },
       ai_provider: aiConfig.provider,
+      ...(insight ? { insight: { text: insight.text, tip: insight.tip } } : {}),
     });
     return;
+  }
+
+  // Text insight section
+  if (insight) {
+    console.log('');
+    console.log(formatSection('Insights'));
+    console.log(`${SPACING.indent}${icons.bulb} ${colors.insight(insight.text)}`);
+    if (insight.tip) {
+      console.log(`${SPACING.indent}  ${colors.textDim(insight.tip)}`);
+    }
+    console.log('');
   }
 
   // Summary
