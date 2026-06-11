@@ -427,6 +427,26 @@ export function getSuccessfulCommandsByRepo(repoPathHash: string, limit: number 
   });
 }
 
+export function getRecentFailedBySession(
+  sessionId: string,
+  excludeCommandId?: number
+): Command | null {
+  return withDbCatch('get recent failed by session', null, () => {
+    let sql = `SELECT * FROM commands WHERE session_id = ? AND exit_code != 0 AND exit_code IS NOT NULL`;
+    const params: (string | number)[] = [sessionId];
+
+    if (excludeCommandId !== undefined) {
+      sql += ` AND id != ?`;
+      params.push(excludeCommandId);
+    }
+
+    sql += ` ORDER BY created_at DESC LIMIT 1`;
+
+    const result = db().prepare(sql).get(...params);
+    return result && isCommand(result) ? result : null;
+  });
+}
+
 export function getFailedCommandsByRepo(repoPathHash: string, limit: number = 10): Command[] {
   return withDbCatch('get failed commands by repo', [], () => {
     const results = db().prepare(`

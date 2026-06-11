@@ -221,9 +221,9 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 
 | Metric | Before | After | Delta |
 |--------|--------|-------|-------|
-| Tests | 93 | 151 | +58 |
-| Files | 11 | 16 | +5 |
-| Expect calls | 184 | 316 | +132 |
+| Tests | 93 | 180 | +87 |
+| Files | 11 | 17 | +6 |
+| Expect calls | 184 | 364 | +180 |
 
 ### 6.2 New Test Files
 
@@ -234,6 +234,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 | `tests/tools/scanner.test.ts` | 8 | All 8 scanners (brew, npm, cargo, pip, gem, go, pnpm, yarn) |
 | `tests/insights/index.test.ts` | 29 | Tool alternative word-boundary, forgotten tool age/usage, frequency, e2e priority ordering |
 | `tests/cli/session.test.ts` | 14 | getRecentSessions grouping/filtering/metadata, CLI empty/grouped/JSON/--repo |
+| `tests/errors/matcher.test.ts` | 29 | hashCommandSignature path/flag/pkg stripping, deriveErrorSignature fallback, autoRecordError with/without stderr, autoDetectFix lifecycle/confidence boost/edge cases |
 
 ### 6.3 Improved Tests
 
@@ -277,13 +278,14 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `tests/cli/session.test.ts`
 - `tests/insights/index.test.ts`
 - `tests/tools/scanner.test.ts`
+- `tests/errors/matcher.test.ts`
 - `bun-api-migration-plan.md`
 
 ### Modified Files (production code)
 - `src/index.ts` — registered digest, workflows, restore, mcp, session; promoted ask/fix/forgotten-tools; added --json flags
 - `src/cli/doctor.ts` — `Bun.which()`, `--json` flag, insight section, insight in JSON output
 - `src/cli/init.ts` — `Bun.file().text()`, updated init wizard for promoted commands, first-run value bomb insight
-- `src/cli/hook.ts` — decomposed into helpers; added `handleHookCd()` for auto-cd
+- `src/cli/hook.ts` — decomposed into helpers; added `handleHookCd()` for auto-cd; auto-record errors + auto-detect fixes in handleHookUpdate
 - `src/cli/export.ts` — path validation
 - `src/cli/import.ts` — path validation
 - `src/cli/ask.ts` — `--json` flag
@@ -295,6 +297,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/cli/config.ts` — `--json` flag
 - `src/cli/digest.ts` — `--json` flag
 - `src/cli/workflows.ts` — `--json` flag
+- `src/errors/matcher.ts` — hashCommandSignature, deriveErrorSignature, autoRecordError, autoDetectFix for session-based auto-learning
 - `src/insights/index.ts` — insight engine with 3 priority-tiered generators, word-boundary matching
 - `src/ui/colors.ts` — added `insight` highlight color (bold)
 - `src/ui/icons.ts` — added `bulb` icon (💡/`*`)
@@ -302,7 +305,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/hooks/zsh-snippet.ts` — added `chpwd` hook for auto-cd
 - `src/hooks/bash-snippet.ts` — added `cd()` override for auto-cd
 - `src/db/index.ts` — singleton, migrations, `setDb()`
-- `src/db/commands.ts` — Zod schema, `withDbCatch()`, `getTopCommandsSince()`, `getRecentSessions()`
+- `src/db/commands.ts` — Zod schema, `withDbCatch()`, `getTopCommandsSince()`, `getRecentSessions()`, `getRecentFailedBySession()`
 - `src/db/tools.ts` — expanded source union
 - `src/db/errors.ts` — `getRecentErrorsSince()`
 - `src/db/schema.sql` — workflows table, relaxed tools constraint
@@ -319,6 +322,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `tests/security/path-validation.test.ts` — (reference for path logic)
 - `tests/insights/index.test.ts` — (new) 29 tests covering all insight generators + e2e priority ordering
 - `tests/cli/session.test.ts` — (new) 14 tests covering DB function + CLI command
+- `tests/errors/matcher.test.ts` — (new) 29 tests covering hashCommandSignature normalization, deriveErrorSignature fallback, autoRecordError with/without stderr, autoDetectFix lifecycle/confidence
 
 ---
 
@@ -524,7 +528,44 @@ The insight engine now also fires in `recall doctor`, giving users ongoing value
      10x faster with better defaults
 ```
 
-### 9.10 Session Timeline (`recall session`)
+### 9.10 Error Auto-Learning (P2.2)
+**Files:** `src/errors/matcher.ts`, `src/db/commands.ts`, `src/cli/hook.ts`, `tests/errors/matcher.test.ts`
+
+Recall now automatically learns from command failures and their fixes — without any user interaction.
+
+**Mechanism:**
+
+When `recall hook update` receives a command result:
+- **Exit code ≠ 0** → `autoRecordError()` records the failure. Uses stderr if captured (`recordCommandError`), otherwise falls back to command-based hashing (`hashCommandSignature`) that strips paths, flags, and package names before hashing with the exit code.
+- **Exit code = 0** → `autoDetectFix()` checks the last failed command in the same session. If a subsequent command succeeds after a failure, it's auto-recorded as a potential fix with initial confidence 0.2. Repeated same-fix patterns boost confidence (+0.2 each time).
+
+**Key design decisions:**
+- **Session-scoped detection** — fix relationships only considered within the same shell session (bounded by inactivity gaps)
+- **Command-based fallback** — `hashCommandSignature()` enables auto-learning even when `stderr_output` isn't captured by shell hooks
+- **Idempotent upserts** — `insertError()` increments occurrences on repeated failures
+- **Never fail the hook** — all auto-learning wrapped in try/catch; the shell pipeline is never blocked
+
+**New exports from `src/errors/matcher.ts`:**
+- `hashCommandSignature(normalizedCommand, exitCode)` — fallback signature when stderr unavailable
+- `deriveErrorSignature(stderr, normalizedCommand, exitCode)` — chooses stderr vs command hashing
+- `autoRecordError(commandId, stderr, normalizedCommand, exitCode)` — background error recording
+- `autoDetectFix(sessionId, fixCommandId, fixNormalizedCommand)` — background fix detection
+
+**New DB function:**
+- `getRecentFailedBySession(sessionId, excludeCommandId?)` — finds the most recent failed command in a session for fix association
+
+**Usage:**
+```bash
+# No user-facing command — runs automatically on every hook update
+# After a session like:
+npm install      # fails (exit 1)
+npm install --legacy-peer-deps  # succeeds (exit 0)
+# Recall auto-records: npm install exit 1 → fixed by npm install --legacy-peer-deps
+```
+
+---
+
+### 9.11 Session Timeline (`recall session`)
 **Files:** `src/cli/session.ts` (new), `src/db/commands.ts`, `src/index.ts`
 
 Groups commands by `session_id` into a timeline view — showing what you did in each session, how long it lasted, and every command within it.

@@ -8,7 +8,8 @@
 import { z } from 'zod';
 import { join } from 'node:path';
 import { normalize, shouldSkipCommand, isDuplicate } from '../import/normalizer.ts';
-import { insertCommand, updateCommand, getRecentNormalizedCommands, getRecentCommands, getStartupCommands } from '../db/commands.ts';
+import { insertCommand, updateCommand, getCommandById, getRecentNormalizedCommands, getRecentCommands, getStartupCommands } from '../db/commands.ts';
+import { autoRecordError, autoDetectFix } from '../errors/matcher.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { getDb } from '../db/index.ts';
 import { getRepoContext } from '../repos/detector.ts';
@@ -159,10 +160,22 @@ export async function handleHookUpdate(args: Record<string, string | undefined>)
     const id = parseInt(parsed.commandId, 10);
     if (isNaN(id)) return;
 
+    const exitCode = parseInt(parsed.exitCode, 10);
+
     updateCommand(id, {
-      exit_code: parseInt(parsed.exitCode, 10),
+      exit_code: exitCode,
       duration_ms: parsed.durationMs ? parseInt(parsed.durationMs, 10) : undefined,
     });
+
+    // Auto-learn from this update (best-effort, never fails the hook)
+    const command = getCommandById(id);
+    if (command && command.session_id) {
+      if (exitCode !== 0) {
+        autoRecordError(id, command.stderr_output, command.normalized_command, exitCode);
+      } else {
+        autoDetectFix(command.session_id, id, command.normalized_command);
+      }
+    }
   } catch (err) {
     // Log to stderr for debugging while maintaining shell stability
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
