@@ -258,6 +258,14 @@ cli
     handleForgottenTools(flags);
   });
 
+// ─── recall mcp ────────────────────────────────────
+cli
+  .command('mcp', 'Start MCP server for AI tool integration (Claude Code, Cursor)')
+  .action(async () => {
+    const { handleMcp } = await import('./cli/mcp.ts');
+    await handleMcp();
+  });
+
 if (experimentalEnabled) {
   // ─── recall replay ─────────────────────────────────
   cli

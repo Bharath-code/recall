@@ -21,6 +21,7 @@ import {
   formatSection, 
   SPACING,
 } from '../ui/index.ts';
+import { generateFirstRunInsight } from '../insights/index.ts';
 
 export interface InitFlags {
   auto?: boolean;
@@ -172,17 +173,28 @@ export async function handleInit(flags: InitFlags): Promise<void> {
   console.log(`${SPACING.indent}${icons.lock} ${colors.textDim('All data stays on your machine. Nothing is phoned home.')}`);
   console.log('');
 
-  // Golden path onboarding: guide user to run 3 commands
+  // First-run insight (value bomb)
+  const insight = generateFirstRunInsight();
+  if (insight) {
+    console.log(`${SPACING.indent}${SPACING.separator.repeat(SPACING.separatorLength)}`);
+    console.log('');
+    console.log(`${SPACING.indent}${icons.bulb} ${colors.bold(colors.insight('Did you know?'))}`);
+    console.log('');
+    console.log(`${SPACING.indent}  ${colors.insight(insight.text)}`);
+    if (insight.tip) {
+      console.log(`${SPACING.indent}  ${colors.textDim(insight.tip)}`);
+    }
+    console.log('');
+  }
+
+  // Golden path onboarding
   console.log(`${SPACING.indent}${SPACING.separator.repeat(SPACING.separatorLength)}`);
   console.log('');
   console.log(`${SPACING.indent}${icons.brain} ${colors.bold('Try it out!')}`);
   console.log('');
-  console.log(colors.textDim(`${SPACING.indent}Run these 3 commands to see Recall in action:`));
-  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('ls')}`);
-  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('pwd')}`);
-  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('echo "hello"')}`);
-  console.log('');
-  console.log(colors.textDim(`${SPACING.indent}Then run:`));
-  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall recent')}`);
+  console.log(colors.textDim(`${SPACING.indent}Run a few commands in your terminal, then:`));
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall recent')}          ${colors.textDim('— See what you ran')}`);
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall search docker')}    ${colors.textDim('— Find that command from last week')}`);
+  console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall project')}         ${colors.textDim('— Get repo context')}`);
   console.log('');
 }

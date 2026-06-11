@@ -58,4 +58,7 @@ export const colors = {
   failed: wrap(pc.red),
   skipped: wrap(pc.yellow),
   pending: wrap(pc.cyan),
+
+  // Insight / highlight (stands out from regular output)
+  insight: wrap(pc.bold),
 } as const;

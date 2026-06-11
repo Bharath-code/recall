@@ -74,6 +74,14 @@ Build quirks:
 - Experimental commands are hidden unless `RECALL_EXPERIMENTAL=1` is set:
   - `replay`, `embed`
 
+## MCP Server
+
+- **Entrypoint:** `src/mcp/index.ts` — starts stdio-based MCP server via `recall mcp`
+- **Binary resolution:** `src/mcp/binary.ts` handles dev (bun) and prod (compiled) modes
+- **Tools exposed:** `recall_search`, `recall_recent`, `recall_project`, `recall_doctor`, `recall_workflows`, `recall_forgotten_tools`, `recall_digest`, `recall_fix`, `recall_config`
+- Each tool calls `recall <command> --json` as a subprocess for clean separation
+- Claude Desktop config: `{ "command": "recall", "args": ["mcp"] }`
+
 ## Key conventions
 
 - **Every AI feature must have a dumb CLI-only fallback.** The CLI works without AI or network.

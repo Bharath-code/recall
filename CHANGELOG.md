@@ -258,6 +258,9 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/cli/workflows.ts`
 - `src/cli/restore.ts`
 - `src/db/workflows.ts`
+- `src/mcp/index.ts`
+- `src/mcp/binary.ts`
+- `src/cli/mcp.ts`
 - `src/hooks/cd-tracker.ts`
 - `src/ui/json-output.ts`
 - `homebrew/Formula/recall.rb`
@@ -299,7 +302,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/ui/index.ts` — (re-export additions)
 - `README.md` — beta status, Homebrew install, promoted commands
 - `SPEC.md` — updated status and experimental commands list
-- `AGENTS.md` — updated experimental commands, Homebrew build note
+- `AGENTS.md` — updated experimental commands, Homebrew build note, MCP server docs
 
 ### Modified Files (tests)
 - `tests/db/commands.test.ts` — rewritten with seeded data
@@ -431,6 +434,43 @@ Also fixed a TypeScript error: removed dead `(provider as string) === 'ollama'` 
 
 Project status updated from "dogfood MVP" to **beta** — core features (capture, search, project memory, tool rediscovery, AI search) are production-ready.
 
+### 9.7 MCP Server (AI Tool Integration)
+**Files:** `src/mcp/index.ts` (new), `src/mcp/binary.ts` (new), `src/cli/mcp.ts` (new), `src/index.ts`, `AGENTS.md`
+
+Recall now exposes its command memory as **MCP tools** for Claude Code, Cursor, and any MCP-compatible AI assistant via `recall mcp`.
+
+**Architecture:**
+- Uses `@modelcontextprotocol/sdk` with stdio transport
+- Each tool shells out to `recall <command> --json` — no logic duplication
+- Binary resolution handles both dev (`bun run`) and compiled binary modes
+- Graceful shutdown on SIGINT/SIGTERM
+
+**Exposed Tools:**
+
+| Tool | Backed By | Purpose |
+|------|-----------|---------|
+| `recall_search` | `recall search --json` | Search command history |
+| `recall_recent` | `recall recent --json` | Recent commands |
+| `recall_project` | `recall project --json` | Project context |
+| `recall_doctor` | `recall doctor --json` | Installation health |
+| `recall_workflows` | `recall workflows --json` | Repeated sequences |
+| `recall_forgotten_tools` | `recall forgotten-tools --json` | Unused tools |
+| `recall_digest` | `recall digest --json` | Weekly activity |
+| `recall_fix` | `recall fix --json` | Error fixes |
+| `recall_config` | `recall config --json` | Configuration |
+
+**Claude Desktop Config:**
+```json
+{
+  "mcpServers": {
+    "recall": {
+      "command": "recall",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
 ---
 
 ## Quick Reference: What You Can Do Now
@@ -459,6 +499,7 @@ recall import --file backup.json         # Restore
 recall delete --id 42                    # Remove one command
 recall delete --all --yes                # Nuclear option
 recall pause / recall resume             # Toggle capture
+recall mcp                              # Start MCP server for AI tool integration
 recall <command> --help                  # Show help for any command
 recall <command> --json                  # Machine-readable output for any command
 ```

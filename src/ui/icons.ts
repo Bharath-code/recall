@@ -35,6 +35,7 @@ const ICON_SET = {
   
   // Memory & intelligence
   brain: '🧠',
+  bulb: '💡',
   memory: '💾',
   replay: '🔄',
   
@@ -98,6 +99,7 @@ const ASCII_ICONS = {
   fix: '*',
   settings: '=',
   brain: '[M]',
+  bulb: '*',
   memory: '[S]',
   replay: '<<',
   lock: '[L]',
