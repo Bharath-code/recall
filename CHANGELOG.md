@@ -309,7 +309,7 @@ source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn' | 'man
 - `src/db/commands.ts` — Zod schema, `withDbCatch()`, `getTopCommandsSince()`, `getRecentSessions()`, `getRecentFailedBySession()`
 - `src/db/tools.ts` — expanded source union
 - `src/db/errors.ts` — `getRecentErrorsSince()`
-- `src/db/schema.sql` — workflows table, relaxed tools constraint
+- `src/db/schema.sql` — workflows table, relaxed tools constraint; added composite indexes `idx_commands_source_created` and `idx_commands_repo_source_created`
 - `src/ai/adapter.ts` — per-provider factories, `AzureModule` type; AI config resolution bugfix
 - `src/tools/scanner.ts` — 5 new scanners
 - `package.json` — added `bench` and `bench:quick` scripts
@@ -588,7 +588,7 @@ Established measurable performance baselines for the three most critical operati
 | FTS: exact match | ~0ms | ~0ms | 0–1ms | 4–15ms |
 | FTS: partial match | ~0ms | ~0ms | 0–1ms | 4–15ms |
 | LIKE keyword fallback | ~0ms | ~0ms | ~3ms | 27–30ms |
-| `getRecentCommands(20)` | ~0ms | ~1ms | ~7ms | ~70ms |
+| `getRecentCommands(20)` | ~0ms | ~0ms | ~0ms | **~0ms** ⚡ |
 | Batch insert (transaction) | 16.7K/s | 20.8K/s | 20.9K/s | — |
 | Sequential insert (no tx) | 20.0K/s | 19.6K/s | 19.6K/s | — |
 
@@ -596,7 +596,9 @@ Established measurable performance baselines for the three most critical operati
 - **Sub-millisecond at 1K** — All operations are instant at typical user scale
 - **FTS stays fast at 100K** — Only 4–15ms for full-text search across 100K rows. The FTS5 index scales linearly.
 - **LIKE fallback degrades gracefully** — 0ms at 1K → 3ms at 10K → ~30ms at 100K. Acceptable for a fallback path.
-- **`getRecentCommands(20)` shows index cost** — 70ms at 100K with `ORDER BY created_at DESC`. The query plan uses the `idx_commands_source` + `created_at` index but still scans many rows.
+- **`getRecentCommands(20)` optimized with composite index** — dropped from ~70ms → ~0ms at 100K by adding `CREATE INDEX commands(source, created_at DESC)`. This allows SQLite to seek directly to `source='hook'` rows and read them in `created_at` order, stopping after 20 rows instead of scanning all 100K.
+- **Repo-scoped queries also optimized** — added `CREATE INDEX commands(repo_path_hash, source, created_at DESC)` for queries like `getCommandsByRepo` and `getRecentCommands({ repo_path_hash })` that filter by repo + source before sorting.
+- **Both indexes auto-apply** to existing DBs on next startup via `CREATE INDEX IF NOT EXISTS`. No migration needed.
 - **Import throughput plateaus at ~20K/s** — Bun's SQLite WAL mode saturates at ~20K inserts/sec regardless of transaction batching. No optimization needed — init imports at ~20K/cmd are fast enough for any realistic history file (<1s for 20K commands).
 
 **Usage:**

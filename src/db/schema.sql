@@ -23,6 +23,10 @@ CREATE INDEX IF NOT EXISTS idx_commands_repo ON commands(repo_path_hash);
 CREATE INDEX IF NOT EXISTS idx_commands_normalized ON commands(normalized_command);
 CREATE INDEX IF NOT EXISTS idx_commands_session ON commands(session_id);
 CREATE INDEX IF NOT EXISTS idx_commands_exit_code ON commands(exit_code);
+-- Composite index for getRecentCommands (source + created_at DESC LIMIT 20)
+CREATE INDEX IF NOT EXISTS idx_commands_source_created ON commands(source, created_at DESC);
+-- Composite index for repo-scoped queries (repo_path_hash + source + created_at DESC LIMIT 20)
+CREATE INDEX IF NOT EXISTS idx_commands_repo_source_created ON commands(repo_path_hash, source, created_at DESC);
 
 -- Full-text search index for fast keyword search
 CREATE VIRTUAL TABLE IF NOT EXISTS commands_fts USING fts5(
