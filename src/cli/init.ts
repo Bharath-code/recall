@@ -211,6 +211,8 @@ async function runWizard(icons: ReturnType<typeof getIcons>): Promise<void> {
       `${colors.path('recall project')}             Current repo context`,
       `${colors.path('recall doctor')}              Check installation`,
       '',
+      `${colors.textDim('cd into a git repo for a brief project hint (once per 5 min).')}`,
+      '',
       `${colors.textDim('Run a few commands in your terminal, then:')}`,
       `${colors.path('recall recent')}              See what you ran`,
       `${colors.path('recall search docker')}        Find that command from last week`,
@@ -364,6 +366,7 @@ async function runAuto(icons: ReturnType<typeof getIcons>, flags: InitFlags): Pr
   console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall recent')}          ${colors.textDim('— Last 20 commands')}`);
   console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall project')}         ${colors.textDim('— Current repo context')}`);
   console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall doctor')}          ${colors.textDim('— Check installation')}`);
+  console.log(colors.textDim(`${SPACING.indent}${SPACING.indent}cd into a git repo for a brief project hint (once per 5 min).`));
   console.log('');
   console.log(colors.textDim(`${SPACING.indent}Advanced commands:`));
   console.log(`${SPACING.indent}${SPACING.indent}${colors.path('recall ask "<question>"')} ${colors.textDim('— AI-powered semantic search')}`);

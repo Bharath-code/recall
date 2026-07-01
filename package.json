@@ -52,10 +52,20 @@
   "keywords": [
     "cli",
     "terminal",
-    "history",
+    "shell-history",
+    "command-history",
     "memory",
     "developer-tools",
     "shell",
-    "productivity"
+    "productivity",
+    "developer-experience",
+    "devtools",
+    "local-first",
+    "sqlite",
+    "bun",
+    "typescript",
+    "search",
+    "project-memory",
+    "workflow-automation"
   ]
 }

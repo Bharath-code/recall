@@ -15,6 +15,7 @@ const CONFIG_KEYS: (keyof RecallConfig)[] = [
   'embed_interval_ms',
   'auto_embed',
   'show_icons',
+  'cd_hints_enabled',
   'preferred_shell',
   'last_digest_at',
   'version',
@@ -150,6 +151,7 @@ function parseValue(
     case 'redact_secrets':
     case 'auto_embed':
     case 'show_icons':
+    case 'cd_hints_enabled':
       if (raw === 'true') return { value: true };
       if (raw === 'false') return { value: false };
       return { value: null, error: 'must be true or false' };
@@ -198,6 +200,7 @@ function isDefaultValue(key: keyof RecallConfig, value: unknown): boolean {
     embed_interval_ms: 300_000,
     auto_embed: false,
     show_icons: true,
+    cd_hints_enabled: true,
     preferred_shell: 'auto',
     last_digest_at: null,
     version: 1,
@@ -214,6 +217,7 @@ function getDefaultString(key: keyof RecallConfig): string {
     embed_interval_ms: '300000',
     auto_embed: 'false',
     show_icons: 'true',
+    cd_hints_enabled: 'true',
     preferred_shell: 'auto',
     last_digest_at: 'null',
     version: '1',

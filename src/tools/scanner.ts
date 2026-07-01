@@ -7,12 +7,31 @@ export interface ScannedTool {
   source: 'brew' | 'npm' | 'cargo' | 'pip' | 'gem' | 'go' | 'pnpm' | 'yarn';
 }
 
+const COMMAND_TIMEOUT_MS = 3_000;
+
 async function runCommand(cmd: string[]): Promise<string> {
   try {
     const proc = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe' });
-    const output = await new Response(proc.stdout).text();
-    const exitCode = await proc.exited;
-    return exitCode === 0 ? output : '';
+
+    const result = await Promise.race([
+      (async () => {
+        const output = await new Response(proc.stdout).text();
+        const exitCode = await proc.exited;
+        return exitCode === 0 ? output : '';
+      })(),
+      new Promise<string>((resolve) => {
+        setTimeout(() => {
+          try {
+            proc.kill();
+          } catch {
+            // Process may already have exited
+          }
+          resolve('');
+        }, COMMAND_TIMEOUT_MS);
+      }),
+    ]);
+
+    return result;
   } catch {
     return '';
   }

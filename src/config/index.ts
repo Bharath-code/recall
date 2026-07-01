@@ -34,6 +34,9 @@ const ConfigSchema = z.object({
   // UI: show icons (default: true)
   show_icons: z.boolean().default(true),
 
+  // Hook: show brief project context when cd'ing into a repo (default: on)
+  cd_hints_enabled: z.boolean().default(true),
+
   // Hook: shell to use for auto-install (default: detect automatically)
   preferred_shell: z.enum(['zsh', 'bash', 'auto']).default('auto'),
 
@@ -131,6 +134,10 @@ export function shouldRedactSecrets(): boolean {
 
 export function isCaptureEnabled(): boolean {
   return getConfig('capture_enabled');
+}
+
+export function areCdHintsEnabled(): boolean {
+  return getConfig('cd_hints_enabled');
 }
 
 export function shouldAutoEmbed(): boolean {

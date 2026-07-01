@@ -1,211 +1,256 @@
 # Recall
-**Your terminal remembers what you forget.**
 
-**History is strings. Recall is context.**
+> **Your terminal remembers what you forget.**  
+> *Local-first command memory for developers.*
 
-Recall is a **local-first** command memory for developers. It captures the commands you run (with context like repo + cwd), so you can **find the exact thing you did last time** and rebuild project context fast—without sending your history to the cloud.
-
-> Status: **beta**. Core features (capture, search, project memory, tool rediscovery, AI search) are production-ready. Experimental features (workflow replay, background embedding) are gated behind `RECALL_EXPERIMENTAL=1`.
-
----
-
-## Why Recall exists
-Terminal work is high-leverage… and strangely ephemeral:
-
-- you re-google commands you *know* you’ve run before
-- you forget the “first 3 commands after cloning” for each repo
-- you install great tools, then keep using the old ones out of habit
-- you repeat the same workflows across projects
-
-Recall is built to fix that with a simple promise:
-
-**capture → search → project memory**
+[![CI](https://img.shields.io/github/actions/workflow/status/bharath/recall-cli/ci.yml?branch=main&label=CI&logo=github)](https://github.com/bharath/recall-cli/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Bun](https://img.shields.io/badge/Bun-1.2%2B-gray?logo=bun)](https://bun.sh)
+![Tests](https://img.shields.io/badge/tests-205%20passing-brightgreen)
 
 ---
 
-## What it does (the wedge)
-- **Repo-aware command recall**: search what you ran, *in this repo*, with timestamps and cwd context
-- **Project memory**: quickly rehydrate “how we run this project” (startup patterns, recent commands)
-- **Local-first by default**: your data stays on your machine (SQLite), no accounts, no telemetry
-- **Strict privacy controls**: pause capture, ignore sensitive command patterns, and delete captured data locally
+History is strings. **Recall is context.**
 
-Planned later:
-- **Forgotten tools**: surface tools you installed but don’t use (brew/npm/cargo)
-- **Workflow replay**: detect common command sequences and run them as a bundle
-- **Optional AI layer**: semantic recall *only when you enable it* (CLI always works without AI)
-
----
-
-## 10-second demo (what you’ll be able to do)
-The core dogfood experience:
+![Recall demo](assets/demo.gif)
 
 ```bash
-# Find the exact command you ran last time
-recall search "docker prune"
+# Search what you ran, in which project, with full context
 
-# See recent commands (with context)
-recall recent
+$ recall search "docker compose"
+  Found 3 matches:
 
-# Repo-aware context: last commands + startup patterns
-recall project
+   1.  docker compose up -d --env-file .env      ~/projects/api    3d ago  ✓  2.3s
+   2.  docker compose logs -f --tail 100          ~/projects/web    1w ago  ✓  0.8s
+   3.  docker compose -f docker.prod.yml up       ~/projects/web    2w ago  ✓  4.1s
+
+$ recall recent --limit 3
+  Recent commands:
+
+  │  git push origin main                   ~/projects/recall    2m ago  ✓  1.2s
+  │  bun test                               ~/projects/recall    5m ago  ✓  12.4s
+  └─ recall search "docker prune"           ~/projects/recall   12m ago  ✓  0.3s
+
+$ recall project
+  Project context for ~/projects/recall (git repo)
+
+  Startup commands:
+  │  bun install
+  │  bun run dev
+  └─ bun test
+
+  Recent failures:
+  └─ docker compose up -d  exit 1  2h ago
+     Last known good:
+     ✓ docker compose up          2d ago
 ```
 
-All core commands are available by default. A few experimental features (workflow replay, background embedding daemon) remain behind `RECALL_EXPERIMENTAL=1`.
+## Features
 
----
+### Repo-Aware Command Recall
 
-## Install
-
-### Homebrew (recommended)
+Search by what you ran, **in which project**, with full context — timestamp, working directory, exit code, and duration.
 
 ```bash
-brew tap Bharath-code/recall
+recall search "deploy" --repo <hash>
+recall search "kubectl" --since 2025-01-01
+recall recent --failed-only
+```
+
+### Project Memory
+
+Rehydrate project context instantly — startup patterns, recent commands, and known errors for any repo.
+
+When you `cd` into a git repo, Recall shows a brief hint (recent commands, startup pattern, last failure) — at most once every 5 minutes per repo.
+
+```bash
+recall project                # Current repo context
+recall project --json         # Machine-readable output
+recall config --set cd_hints_enabled=false   # Disable auto hints on cd
+```
+
+### Tool Rediscovery
+
+Find tools you installed but forgot to use. Surface alternatives to deprecated tools.
+
+```bash
+recall forgotten-tools        # Installed but unused
+recall digest                  # Weekly terminal activity summary
+```
+
+### Optional AI Semantic Search
+
+Natural language querying with a **provider-agnostic adapter** — bring your own API key (OpenAI, Anthropic, Google, Cohere, Ollama).
+
+```bash
+recall ask "how do I clean up docker images"
+recall ask "what was that kubectl command from last week"
+```
+
+### MCP Server (Claude Code, Cursor)
+
+Expose your command history to AI agents via Model Context Protocol:
+
+```bash
+recall mcp
+```
+
+See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for Claude Desktop and Cursor configuration.
+
+### Privacy-First by Design
+
+- **Local-only storage** — SQLite on your machine, nothing leaves
+- **Zero telemetry** — no tracking, no hidden network calls
+- **AI disabled by default** — requires explicit opt-in
+- **Capture controls** — pause, ignore patterns, redact secrets, delete data
+
+```bash
+recall config --set capture_enabled=false
+recall ignore add "git push*"
+recall delete --all --yes
+```
+
+## Quick Start
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew tap bharath-code/recall
 brew install recall
-recall --help
-recall init
+recall init        # Run the setup wizard
 ```
-
-*Requires macOS or Linux (x86_64). The tap formula is auto-updated on each release.*
 
 ### From Source
 
-Requirements:
-- macOS with zsh
-- Bun 1.2+
-- Git available in `PATH`
-
 ```bash
+git clone https://github.com/bharath/recall-cli.git
+cd recall-cli
 bun install
-bun run build
-./bin/recall --help
-./bin/recall init
+bun run dev        # Run via Bun
+bun run build      # Compile to bin/recall
 ```
 
-Default setup prints the shell hook line for manual install:
+Then open a new terminal and start working. Recall captures every command automatically.
 
-```bash
-eval "$(recall hook zsh)"
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `recall init` | Onboarding wizard (shell hook, history import, tool scan) |
+| `recall search <query>` | Search captured commands with FTS5 |
+| `recall recent` | Show recent commands |
+| `recall project` | Current repo context (startup patterns, recent activity) |
+| `recall session` | Session timeline view |
+| `recall ask <question>` | AI-powered semantic search |
+| `recall digest` | Weekly terminal activity summary |
+| `recall workflows` | Detect repeated command sequences |
+| `recall restore` | Replay a stored workflow |
+| `recall fix` | Show known fixes for recent errors |
+| `recall forgotten-tools` | Find installed but unused tools |
+| `recall ignore` | Manage capture ignore patterns |
+| `recall delete` | Remove captured data |
+| `recall config` | View / update settings |
+| `recall export` | Export data to JSON |
+| `recall import` | Import from export or shell history |
+| `recall pick` | Interactive command picker |
+| `recall doctor` | Diagnose installation health |
+| `recall uninstall` | Remove Recall from your system |
+| `recall pause / resume` | Pause / resume command capture |
+| `recall completions <shell>` | Generate shell completions |
+| `recall mcp` | Start MCP server for AI tool integration |
+
+## Built With
+
+| Technology | Purpose |
+|------------|---------|
+| [Bun](https://bun.sh) | Runtime, bundler, package manager, test runner |
+| [TypeScript](https://www.typescriptlang.org/) | Type safety across the entire codebase |
+| [Bun SQLite](https://bun.sh/docs/api/sqlite) | Zero-config local database |
+| [FTS5](https://www.sqlite.org/fts5.html) | Full-text search engine (4–15ms at 100K rows) |
+| [CAC](https://github.com/cacjs/cac) | CLI framework (lighter than Commander) |
+| [Zod](https://zod.dev) | Runtime schema validation |
+| [@clack/prompts](https://github.com/natemoo-re/clack) | Interactive terminal prompts |
+| [AI SDK](https://sdk.vercel.ai) | Provider-agnostic AI adapter |
+
+## Architecture
+
 ```
-
-Use `recall init --auto` only when you want Recall to append the hook to your shell rc file.
-
----
-
-## Trust & privacy (non-negotiable)
-Shell history is personal. Recall is designed to earn trust first.
-
-- **Local-first storage**: commands live in a local SQLite DB (no cloud sync in early phases)
-- **No telemetry** by default (no tracking, no hidden network calls)
-- **AI disabled by default**: semantic search (`recall ask`) requires opt-in through API keys or local models. No AI features run without explicit configuration.
-- **Hook install is two-mode**:
-  - **Default: print-only** (Starship-style) — shows you the line to add to your shell rc
-  - **Opt-in: `--auto`** — safe append-only install with idempotent detection (zinit pattern)
-- **Capture controls**:
-  - `recall config --set capture_enabled=false`
-  - `recall ignore add <pattern>`
-  - `recall delete --id <id>`
-  - `recall delete --all --yes`
-
----
-
-## Competitors (and why Recall is still needed)
-Most “command recall” solutions optimize for **searching strings**. Recall is optimizing for **recreating context**.
-
-| Alternative | Great at | Missing piece | Why Recall |
-|---|---|---|---|
-| `history` / `history \| fzf` | Fast fuzzy search | No durable **project context** (repo/cwd/exit/duration) | Recall makes “what did I run in *this repo*?” a first-class query |
-| `ripgrep` in notes/dotfiles | Searching what’s written down | Doesn’t capture what you **actually executed** | Recall captures executions + context automatically |
-| Atuin (sync-first history) | Powerful search + cross-machine sync | For some users: cloud/account concerns; history-first, not project-memory-first | Recall is **local-first by default** and centered on repo/project memory (team features later) |
-| “AI terminal agents” | Generating new commands | Not deterministic; trust/reliability gaps for “what happened” | Recall starts with **truthful memory**, then adds optional AI later |
-
-### The bottom line
-If you only need “find a command string”, existing tools are already excellent.
-If you need **repo-aware recall + project memory** (and later workflows) with a **local-first trust posture**, that’s what Recall is built for.
-
----
-
----
+recall
+├── src/
+│   ├── cli/         # 25+ command handlers
+│   ├── db/          # SQLite schema, migrations, CRUD
+│   ├── hooks/       # Shell hook snippets (zsh + bash)
+│   ├── ui/          # Colors, icons, spinners, formatting
+│   ├── ai/          # Provider-agnostic AI adapter
+│   ├── import/      # History parser + normalizer
+│   ├── workflows/   # Workflow detection + execution
+│   ├── repos/       # Git repo detection
+│   ├── tools/       # Tool scanners (brew, npm, cargo, pip…)
+│   ├── errors/      # Error signature matching
+│   └── sync/        # Sync adapter interface (Phase 2)
+├── tests/           # 202+ unit tests
+├── landing/         # Marketing site (Astro + Tailwind)
+└── scripts/         # Build + demo helpers
+```
 
 ## Performance
 
-Recall is designed to be invisible — every command runs a hook in sub-millisecond time. Here are measured baselines across DB sizes (macOS ARM64):
-
-| Operation | 100 cmd | 1K cmd | 10K cmd | 100K cmd |
-|-----------|---------|--------|---------|----------|
-| Hook insert (capture) | ~0ms | ~0ms | — | — |
-| Hook update (exit/duration) | ~0ms | ~0ms | — | — |
-| FTS search (exact or partial) | ~0ms | ~0ms | 0–1ms | **4–15ms** |
-| LIKE keyword fallback | ~0ms | ~0ms | ~3ms | **27–30ms** |
+| Operation | 100 commands | 1K | 10K | 100K |
+|-----------|-------------|----|-----|------|
+| Hook capture | ~0ms | ~0ms | — | — |
+| FTS search | ~0ms | ~0ms | 0–1ms | **4–15ms** |
+| Keyword fallback | ~0ms | ~0ms | ~3ms | **27–30ms** |
 | `recall recent` (limit 20) | ~0ms | ~1ms | ~7ms | **~70ms** |
 | Import throughput | 20K/s | 20K/s | 20K/s | — |
 
-**Key takeaways:**
-- **Hook latency is sub-millisecond** — zero impact on shell responsiveness at any DB size
-- **FTS5 search stays fast at 100K** — full-text search completes in 4–15ms even with 100K rows
-- **LIKE fallback degrades gracefully** — 30ms at 100K is acceptable for an edge case
-- **Import plateaus at ~20K commands/sec** — a `~/.zsh_history` with 20K lines imports in ~1 second
-- **Benchmarks are reproducible** — run `bun run bench` to measure your own system
+## Why Recall?
 
----
+| Tool | Great at | Recall's edge |
+|------|----------|--------------|
+| `history \| fzf` | Fast fuzzy search | **Repo-aware context** — project memory, not just strings |
+| Atuin | Cross-machine sync | **Local-first by default** + project-centered design |
+| ripgrep | Searching written docs | **Captures actual executions** automatically |
+| AI agents | Generating commands | **Truthful record** of what actually happened |
 
-## Why not `history | fzf` / ripgrep / Atuin? (quick version)
-Those tools are great. Recall is aiming at a different abstraction level:
+## Recall vs Atuin
 
-- **Beyond raw history**: stores *context* (repo, cwd, timestamps, exit code, duration)
-- **Project memory**: helps you rehydrate “how we run this repo” (not just “what command strings exist”)
-- **Local-first + calm UX**: no accounts, no cloud by default, no spammy suggestions
-- **Future workflow layer**: not just search—detect and replay repeated sequences
+Both tools capture shell history with context. They solve different primary jobs.
 
-If you just want fast fuzzy history search, `fzf` (and friends) may already be enough.
-If you want **repo-aware recall + project memory**, Recall is the bet.
+| | **Atuin** | **Recall** |
+|---|-----------|------------|
+| **Primary job** | Sync history across machines | Remember what you did **in this project** |
+| **Search** | Excellent TUI + fuzzy | Keyword/FTS + `recall pick` |
+| **Sync** | Free E2EE hosted sync | Local-only (no sync yet) |
+| **Project memory** | Directory filter | `recall project` — startup patterns, failures, workflows |
+| **Unique features** | Stats, sync | Forgotten tools, workflow detection, MCP server |
+| **AI** | Atuin AI | `recall ask` (BYOK, keyword fallback) |
 
----
+**Use Atuin** if you need history on every machine. **Use Recall** if you need repo context, workflow patterns, and agent memory. Many developers use both.
 
-## Roadmap (phases)
-Recall is intentionally phased to avoid feature bloat and earn trust.
+## Roadmap
 
-- **Phase 1 — Trust / Memory**
-  - shell capture (zsh + bash)
-  - history import
-  - local SQLite store
-  - `recall search`, `recall recent`, basic `recall project`
-- **Phase 2 — Delight / Tool rediscovery**
-  - installed tool scanner (brew/npm/cargo)
-  - dormant tool detection + suggestions
-  - weekly digest (local)
-- **Phase 3 — Workflow automation**
-  - detect repeated command chains
-  - save + replay workflows
-- **Phase 4 — Optional AI**
-  - semantic recall and contextual suggestions (opt-in)
-- **Phase 5 — Team (monetization later)**
-  - shared workflows + onboarding packs
-
----
+| Phase | Status | Focus |
+|-------|--------|-------|
+| **1 — Memory** | ✅ Live | Shell capture, search, project context |
+| **2 — Discovery** | ✅ Live | Tool scanning, forgotten tools, digest |
+| **3 — Workflows** | ✅ Live | Sequence detection, replay |
+| **4 — AI** | ✅ Live | Semantic search (opt-in, bring your own key) |
+| **5 — Team** | 🔜 Planned | Shared workflows, onboarding packs |
 
 ## Contributing
-This project is early. Contributions that move the needle most:
-
-- Harden the Phase 1 MVP (shell capture → SQLite → search)
-- Tighten the trust story (hook safety, secret redaction rules, uninstall/doctor UX)
-- Produce the first “10-second demo” clip once CLI exists
-
-Before opening a PR, run:
 
 ```bash
-bun test
-bun run lint
-bun run build
+bun test              # 205+ tests
+bun run lint          # tsc --noEmit
+bun run build         # Compile to bin/recall
 ```
 
-Then open an issue with:
-- what you plan to build
-- which files you’ll touch
-- how you’ll test it (Bun test)
+Open an issue or PR. All contributions welcome.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-## License
-Not chosen yet.
-
-If you’re serious about OSS growth + corporate adoption, a permissive license (MIT/Apache-2.0) usually reduces friction.
+Built with Bun, TypeScript, and a terminal obsession.

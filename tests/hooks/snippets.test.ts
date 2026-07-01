@@ -10,6 +10,8 @@ describe('shell snippets', () => {
     expect(snippet).toContain('recall hook update');
     expect(snippet).toContain('add-zsh-hook preexec _recall_preexec');
     expect(snippet).toContain('add-zsh-hook precmd _recall_precmd');
+    expect(snippet).toContain('recall hook cd');
+    expect(snippet).toContain('add-zsh-hook chpwd _recall_chpwd');
   });
 
   test('bash snippet uses one consistent session id variable', () => {
@@ -18,5 +20,7 @@ describe('shell snippets', () => {
     expect(snippet).toContain('_RECALL_SESSION_ID=');
     expect(snippet).toContain('--session-id "$_RECALL_SESSION_ID"');
     expect(snippet).not.toContain('_recall_session_id=');
+    expect(snippet).toContain('recall hook cd');
+    expect(snippet).toContain('cd() {');
   });
 });

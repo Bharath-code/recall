@@ -8,7 +8,15 @@
 import { z } from 'zod';
 import { join } from 'node:path';
 import { normalize, shouldSkipCommand, isDuplicate } from '../import/normalizer.ts';
-import { insertCommand, updateCommand, getCommandById, getRecentNormalizedCommands, getRecentCommands, getStartupCommands } from '../db/commands.ts';
+import {
+  insertCommand,
+  updateCommand,
+  getCommandById,
+  getRecentNormalizedCommands,
+  getRecentCommands,
+  getStartupCommands,
+  getFailedCommandsByRepo,
+} from '../db/commands.ts';
 import { autoRecordError, autoDetectFix } from '../errors/matcher.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { getDb } from '../db/index.ts';
@@ -17,13 +25,14 @@ import { generateZshSnippet } from '../hooks/zsh-snippet.ts';
 import { generateBashSnippet } from '../hooks/bash-snippet.ts';
 import { detectShell, getShellRcPath, appendHookToRc } from '../hooks/detect.ts';
 import { detectCommonWorkflows } from '../workflows/detector.ts';
-import { colors } from '../ui/index.ts';
 import {
   commandMatchesIgnoredPattern,
+  areCdHintsEnabled,
   isCaptureEnabled,
   redactSecretsFromCommand,
   shouldAutoEmbed,
 } from '../config/index.ts';
+import { formatCdHintLines } from '../hooks/cd-hint.ts';
 import { hasShownRecently, markShown } from '../hooks/cd-tracker.ts';
 
 const CaptureSchema = z.object({
@@ -271,45 +280,29 @@ export async function handleUnbindCtrlR(): Promise<void> {
  */
 export async function handleHookCd(args: Record<string, string | undefined>): Promise<void> {
   try {
-    if (!isCaptureEnabled()) return;
+    if (!isCaptureEnabled() || !areCdHintsEnabled()) return;
 
     const cwd = args.cwd ?? args['cwd'] ?? process.cwd();
 
-    // Get repo context
     const repoCtx = await getRepoContext(cwd);
-    if (!repoCtx) return; // Not a git repo — silent
+    if (!repoCtx) return;
 
-    // Check if we've shown this repo recently (anti-spam)
     if (hasShownRecently(repoCtx.hash)) return;
 
-    // Get recent commands for this repo
     const recent = getRecentCommands({ repo_path_hash: repoCtx.hash, limit: 5 });
-    if (recent.length === 0) return; // No data — silent
+    if (recent.length === 0) return;
+
+    const lines = formatCdHintLines({
+      repoName: repoCtx.name,
+      recent,
+      startup: getStartupCommands(repoCtx.hash, 1),
+      workflows: detectCommonWorkflows(repoCtx.hash, 1),
+      failed: getFailedCommandsByRepo(repoCtx.hash, 1),
+    });
+
+    if (!lines) return;
 
     markShown(repoCtx.hash);
-
-    // Build output
-    const repoName = repoCtx.name;
-    const lastCmds = recent.slice(0, 3).map(c => c.raw_command).join(' · ');
-
-    // Check for startup patterns
-    const startup = getStartupCommands(repoCtx.hash, 1);
-
-    // Check for common workflows
-    const workflows = detectCommonWorkflows(repoCtx.hash, 1);
-
-    const lines: string[] = [];
-    lines.push(`  ${colors.dim(`recall: ${repoName} | ${lastCmds}`)}`);
-
-    if (startup.length > 0) {
-      lines.push(`  ${colors.dim(`         ↳ startup: ${startup[0].raw_command}`)}`);
-    }
-
-    if (workflows.length > 0) {
-      const wf = workflows[0];
-      lines.push(`  ${colors.dim(`         ↳ workflow: ${wf.commands.join(' → ')} (${wf.frequency}x)`)}`);
-    }
-
     console.log(lines.join('\n'));
   } catch {
     // Never fail the shell — cd must always succeed
