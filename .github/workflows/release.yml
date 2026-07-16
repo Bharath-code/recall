@@ -56,8 +56,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ── macOS Intel build ────────────────────────────────────────────────
+  # Cross-compiled from the ARM runner: GitHub retired free Intel macOS
+  # runners (macos-13 queues forever waiting for a pool that no longer
+  # exists). `bun build --target=bun-darwin-x64` produces an x64 Mach-O
+  # binary on Apple Silicon; ad-hoc codesign works cross-arch too.
   macos-x64:
-    runs-on: macos-13  # Intel runner
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -69,7 +73,7 @@ jobs:
 
       - name: Build binary
         run: |
-          bun build src/index.ts --compile --outfile bin/recall
+          bun build src/index.ts --compile --target=bun-darwin-x64 --outfile bin/recall
           bash scripts/sign-macos.sh bin/recall
 
       - name: Package tarball
