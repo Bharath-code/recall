@@ -11,6 +11,23 @@
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
       <!-- Feature 1 -->
+      <div class="group p-6 bg-slate/20 border border-mint/30 rounded-2xl hover:border-mint/40 hover:shadow-[0_8px_24px_-8px_rgba(0,255,159,0.12)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 reveal">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center text-lg">🔌</div>
+          <h3 class="text-base font-bold font-mono text-mint">Agent Memory (MCP)</h3>
+        </div>
+        <p class="text-dust text-sm leading-relaxed mb-3">
+          <code class="text-cloud font-mono text-xs bg-slate/50 px-1.5 py-0.5 rounded">recall mcp</code> —
+          exposes your command history to Claude Code and Cursor. Your agent answers from what you ran, not a guess.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">Claude Code</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">Cursor</span>
+          <span class="text-[11px] font-mono text-dust bg-slate/40 px-2 py-0.5 rounded">stdio</span>
+        </div>
+      </div>
+
+      <!-- Feature 1b -->
       <div class="group p-6 bg-slate/20 border border-slate/30 rounded-2xl hover:border-cyan/40 hover:shadow-[0_8px_24px_-8px_rgba(0,217,255,0.12)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 reveal">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 rounded-lg bg-cyan/10 flex items-center justify-center text-lg">🔍</div>

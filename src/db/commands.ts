@@ -73,37 +73,70 @@ function withDbCatch<T>(operation: string, fallback: T, fn: () => T): T {
   }
 }
 
+const INSERT_COLUMNS_BASE = [
+  'raw_command', 'normalized_command', 'cwd', 'repo_path_hash',
+  'exit_code', 'duration_ms', 'shell', 'stderr_output', 'session_id', 'source',
+];
+const INSERT_COLUMNS_WITH_CREATED_AT = [...INSERT_COLUMNS_BASE, 'created_at'];
+
+let _insertStmt: ReturnType<Database['prepare']> | null = null;
+let _insertStmtWithCreatedAt: ReturnType<Database['prepare']> | null = null;
+let _insertStmtDb: Database | null = null;
+
+function insertStmt(withCreatedAt: boolean): ReturnType<Database['prepare']> {
+  const currentDb = db();
+  if (currentDb !== _insertStmtDb) {
+    _insertStmt = null;
+    _insertStmtWithCreatedAt = null;
+    _insertStmtDb = currentDb;
+  }
+  if (withCreatedAt) {
+    _insertStmtWithCreatedAt ??= currentDb.prepare(
+      `INSERT INTO commands (${INSERT_COLUMNS_WITH_CREATED_AT.join(', ')}) VALUES (${INSERT_COLUMNS_WITH_CREATED_AT.map(() => '?').join(', ')})`
+    );
+    return _insertStmtWithCreatedAt;
+  }
+  _insertStmt ??= currentDb.prepare(
+    `INSERT INTO commands (${INSERT_COLUMNS_BASE.join(', ')}) VALUES (${INSERT_COLUMNS_BASE.map(() => '?').join(', ')})`
+  );
+  return _insertStmt;
+}
+
+function insertValues(input: InsertCommandInput): (string | number | null)[] {
+  const values: (string | number | null)[] = [
+    input.raw_command,
+    input.normalized_command,
+    input.cwd,
+    input.repo_path_hash ?? null,
+    input.exit_code ?? null,
+    input.duration_ms ?? null,
+    input.shell,
+    input.stderr_output ?? null,
+    input.session_id ?? null,
+    input.source ?? 'hook',
+  ];
+  if (input.created_at) values.push(input.created_at);
+  return values;
+}
+
 export function insertCommand(input: InsertCommandInput): number {
   return withDbCatch('insert command', 0, () => {
-    const columns = [
-      'raw_command', 'normalized_command', 'cwd', 'repo_path_hash',
-      'exit_code', 'duration_ms', 'shell', 'stderr_output', 'session_id', 'source',
-    ];
-    const values: (string | number | null)[] = [
-      input.raw_command,
-      input.normalized_command,
-      input.cwd,
-      input.repo_path_hash ?? null,
-      input.exit_code ?? null,
-      input.duration_ms ?? null,
-      input.shell,
-      input.stderr_output ?? null,
-      input.session_id ?? null,
-      input.source ?? 'hook',
-    ];
-
-    if (input.created_at) {
-      columns.push('created_at');
-      values.push(input.created_at);
-    }
-
-    const placeholders = columns.map(() => '?').join(', ');
-    const stmt = db().prepare(`
-      INSERT INTO commands (${columns.join(', ')}) VALUES (${placeholders})
-    `);
-
-    const result = stmt.run(...values);
+    const result = insertStmt(!!input.created_at).run(...insertValues(input));
     return Number(result.lastInsertRowid);
+  });
+}
+
+export function insertCommands(inputs: InsertCommandInput[]): number[] {
+  return withDbCatch('insert commands', [], () => {
+    const insertMany = db().transaction((rows: InsertCommandInput[]) => {
+      const ids: number[] = [];
+      for (const row of rows) {
+        const result = insertStmt(!!row.created_at).run(...insertValues(row));
+        ids.push(Number(result.lastInsertRowid));
+      }
+      return ids;
+    });
+    return insertMany(inputs);
   });
 }
 
@@ -171,17 +204,41 @@ export function searchCommands(opts: SearchOptions): Command[] {
   });
 }
 
+function likeSearch(query: string, limit: number): Command[] {
+  const pattern = `%${query}%`;
+  const results = db().prepare(`
+    SELECT * FROM commands
+    WHERE source = 'hook' AND (normalized_command LIKE ? OR raw_command LIKE ? OR cwd LIKE ?)
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(pattern, pattern, pattern, limit);
+  return results.filter(isCommand) as Command[];
+}
+
 export function searchCommandsKeyword(query: string, limit: number = 20): Command[] {
   return withDbCatch('search commands by keyword', [], () => {
-    // Fallback keyword search using LIKE (for when FTS fails or simple queries)
-    const pattern = `%${query}%`;
-    const results = db().prepare(`
-      SELECT * FROM commands
-      WHERE source = 'hook' AND (normalized_command LIKE ? OR raw_command LIKE ? OR cwd LIKE ?)
-      ORDER BY created_at DESC
-      LIMIT ?
-    `).all(pattern, pattern, pattern, limit);
-    return results.filter(isCommand) as Command[];
+    try {
+      // Quote each term as a prefix match so FTS5 tokenizes hyphens/punctuation literally
+      const ftsQuery = query
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(term => `"${term.replace(/"/g, '""')}"*`)
+        .join(' ');
+
+      if (!ftsQuery) return [];
+
+      const results = db().prepare(`
+        SELECT c.* FROM commands c
+        JOIN commands_fts fts ON c.id = fts.rowid
+        WHERE commands_fts MATCH ? AND c.source = 'hook'
+        ORDER BY c.created_at DESC
+        LIMIT ?
+      `).all(ftsQuery, limit);
+      return results.filter(isCommand) as Command[];
+    } catch {
+      return likeSearch(query, limit);
+    }
   });
 }
 

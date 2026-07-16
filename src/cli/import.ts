@@ -5,12 +5,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, normalize } from 'node:path';
 import { z } from 'zod';
-import { insertCommand } from '../db/commands.ts';
+import { insertCommands, getRecentNormalizedCommands, type InsertCommandInput } from '../db/commands.ts';
 import { upsertRepo } from '../db/repos.ts';
 import { batchUpsertTools } from '../db/tools.ts';
 import { parseZshHistory, parseBashHistory } from '../import/history-parser.ts';
 import { normalize as normalizeCommand, shouldSkipCommand } from '../import/normalizer.ts';
-import { getRecentNormalizedCommands } from '../db/commands.ts';
 import { colors, formatHeader, getIcons, createSpinner } from '../ui/index.ts';
 
 const ImportFlagsSchema = z.object({
@@ -139,7 +138,6 @@ function importRecallJSON(filePath: string): void {
       throw new Error('Invalid Recall export format');
     }
 
-    let importedCommands = 0;
     let importedRepos = 0;
     let importedTools = 0;
 
@@ -147,6 +145,7 @@ function importRecallJSON(filePath: string): void {
     const existingCommands = new Set(getRecentNormalizedCommands(1000));
 
     // Import commands
+    const commandsToInsert: InsertCommandInput[] = [];
     if (Array.isArray(data.commands)) {
       for (const cmd of data.commands) {
         if (shouldSkipCommand(cmd.raw_command)) continue;
@@ -156,7 +155,7 @@ function importRecallJSON(filePath: string): void {
         // Skip if already exists (simple dedup)
         if (existingCommands.has(normalized)) continue;
 
-        insertCommand({
+        commandsToInsert.push({
           raw_command: cmd.raw_command,
           normalized_command: normalized,
           cwd: cmd.cwd || process.env.HOME || '~',
@@ -168,10 +167,10 @@ function importRecallJSON(filePath: string): void {
           session_id: cmd.session_id || null,
           source: 'import',
         });
-
-        importedCommands++;
       }
     }
+    insertCommands(commandsToInsert);
+    const importedCommands = commandsToInsert.length;
 
     // Import repos
     if (Array.isArray(data.repos)) {
@@ -217,9 +216,9 @@ function importShellHistory(filePath: string, shell: 'zsh' | 'bash'): void {
     const content = readFileSync(filePath, 'utf-8');
     const parsed = shell === 'zsh' ? parseZshHistory(content) : parseBashHistory(content);
 
-    let imported = 0;
     const existingCommands = new Set(getRecentNormalizedCommands(1000));
 
+    const commandsToInsert: InsertCommandInput[] = [];
     for (const cmd of parsed) {
       if (shouldSkipCommand(cmd.command)) continue;
       const normalized = normalizeCommand(cmd.command);
@@ -228,16 +227,16 @@ function importShellHistory(filePath: string, shell: 'zsh' | 'bash'): void {
       // Skip if already exists
       if (existingCommands.has(normalized)) continue;
 
-      insertCommand({
+      commandsToInsert.push({
         raw_command: cmd.command,
         normalized_command: normalized,
         cwd: process.env.HOME || '~',
         shell,
         source: 'import',
       });
-
-      imported++;
     }
+    insertCommands(commandsToInsert);
+    const imported = commandsToInsert.length;
 
     spinner.succeed(colors.success('Import complete'));
     console.log('');

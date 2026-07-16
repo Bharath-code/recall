@@ -192,10 +192,11 @@ describe('core CLI dogfood flows', () => {
 
   test('search remains fast with ten thousand commands', async () => {
     const script = `
-      import { insertCommand, searchCommandsKeyword } from '${join(repoRoot, 'src/db/commands.ts')}';
+      import { insertCommands, searchCommandsKeyword } from '${join(repoRoot, 'src/db/commands.ts')}';
       const startSeed = performance.now();
+      const rows = [];
       for (let i = 0; i < 10000; i++) {
-        insertCommand({
+        rows.push({
           raw_command: 'echo perf-' + i,
           normalized_command: 'echo perf-' + i,
           cwd: '/tmp',
@@ -203,10 +204,12 @@ describe('core CLI dogfood flows', () => {
           exit_code: 0,
         });
       }
+      insertCommands(rows);
+      const seededMs = performance.now() - startSeed;
       const start = performance.now();
       const results = searchCommandsKeyword('perf-9999', 20);
       const elapsed = performance.now() - start;
-      console.log(JSON.stringify({ elapsed, count: results.length, seededMs: performance.now() - startSeed }));
+      console.log(JSON.stringify({ elapsed, count: results.length, seededMs }));
     `;
 
     const proc = Bun.spawn(['bun', '--eval', script], {
@@ -227,8 +230,9 @@ describe('core CLI dogfood flows', () => {
 
     expect(stderr).toBe('');
     expect(exitCode).toBe(0);
-    const parsed = JSON.parse(stdout) as { elapsed: number; count: number };
+    const parsed = JSON.parse(stdout) as { elapsed: number; count: number; seededMs: number };
     expect(parsed.count).toBeGreaterThan(0);
     expect(parsed.elapsed).toBeLessThan(100);
+    expect(parsed.seededMs).toBeLessThan(5000);
   }, 15000);
 });

@@ -10,6 +10,27 @@ recall mcp
 
 The server uses stdio transport. Most clients launch it as a subprocess — you do not need to run it manually.
 
+## Claude Code
+
+Add to `.mcp.json` in your project root, or `~/.claude.json` for a user-level server:
+
+```json
+{
+  "mcpServers": {
+    "recall": {
+      "command": "recall",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Or from the CLI:
+
+```bash
+claude mcp add recall -- recall mcp
+```
+
 ## Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the equivalent path on your OS:

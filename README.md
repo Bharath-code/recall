@@ -1,7 +1,7 @@
 # Recall
 
-> **Your terminal remembers what you forget.**  
-> *Local-first command memory for developers.*
+> **Give your AI coding agent a memory of how you actually work.**  
+> *Local-first command history, exposed to Claude Code and Cursor over MCP.*
 
 [![CI](https://img.shields.io/github/actions/workflow/status/bharath/recall-cli/ci.yml?branch=main&label=CI&logo=github)](https://github.com/bharath/recall-cli/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -10,42 +10,40 @@
 
 ---
 
-History is strings. **Recall is context.**
+Your agent keeps asking how to deploy this repo, which flags that script needs, why that error happened last time. You already know — it's in your shell history. **Recall gives the agent that memory.**
 
 ![Recall demo](assets/demo.gif)
 
-```bash
-# Search what you ran, in which project, with full context
-
-$ recall search "docker compose"
-  Found 3 matches:
-
-   1.  docker compose up -d --env-file .env      ~/projects/api    3d ago  ✓  2.3s
-   2.  docker compose logs -f --tail 100          ~/projects/web    1w ago  ✓  0.8s
-   3.  docker compose -f docker.prod.yml up       ~/projects/web    2w ago  ✓  4.1s
-
-$ recall recent --limit 3
-  Recent commands:
-
-  │  git push origin main                   ~/projects/recall    2m ago  ✓  1.2s
-  │  bun test                               ~/projects/recall    5m ago  ✓  12.4s
-  └─ recall search "docker prune"           ~/projects/recall   12m ago  ✓  0.3s
-
-$ recall project
-  Project context for ~/projects/recall (git repo)
-
-  Startup commands:
-  │  bun install
-  │  bun run dev
-  └─ bun test
-
-  Recent failures:
-  └─ docker compose up -d  exit 1  2h ago
-     Last known good:
-     ✓ docker compose up          2d ago
+```jsonc
+// ~/.claude.json (or .cursor/mcp.json) — one-time setup
+{
+  "mcpServers": {
+    "recall": { "command": "recall", "args": ["mcp"] }
+  }
+}
 ```
 
+```
+You: how do I deploy this repo?
+
+Claude Code: [calls recall_search("deploy")]
+  → Found: "docker compose -f docker.prod.yml up -d" — ran 2 days ago in
+    this repo, exited 0, took 4.1s. That's your last successful deploy.
+```
+
+No re-explaining your workflow every session. No stale docs. The agent reads what you actually ran, not what a README claims you should run.
+
 ## Features
+
+### MCP Server (Claude Code, Cursor)
+
+Expose your command history to AI agents via Model Context Protocol:
+
+```bash
+recall mcp
+```
+
+See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for Claude Code, Claude Desktop, and Cursor configuration.
 
 ### Repo-Aware Command Recall
 
@@ -86,16 +84,6 @@ Natural language querying with a **provider-agnostic adapter** — bring your ow
 recall ask "how do I clean up docker images"
 recall ask "what was that kubectl command from last week"
 ```
-
-### MCP Server (Claude Code, Cursor)
-
-Expose your command history to AI agents via Model Context Protocol:
-
-```bash
-recall mcp
-```
-
-See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for Claude Desktop and Cursor configuration.
 
 ### Privacy-First by Design
 
