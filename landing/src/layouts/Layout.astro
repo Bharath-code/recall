@@ -10,6 +10,8 @@ const {
   title,
   description = "Your terminal remembers what you forget. Capture every command. Search instantly. Recall exactly what you ran, where, and when."
 } = Astro.props;
+
+const cfBeaconToken = import.meta.env.CF_BEACON_TOKEN;
 ---
 
 <!doctype html>
@@ -37,6 +39,10 @@ const {
         }
       })();
     </script>
+
+    {cfBeaconToken && (
+      <script defer is:inline src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={JSON.stringify({ token: cfBeaconToken })}></script>
+    )}
   </head>
   <body class="bg-ink text-cloud font-sans antialiased">
     <slot />
