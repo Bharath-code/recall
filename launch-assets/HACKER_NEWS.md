@@ -23,7 +23,7 @@ Install:
   brew install recall
   recall init --auto
 
-Source: https://github.com/bharath/recall-cli
+Source: https://github.com/Bharath-code/recall
 
 Limitations: no cross-machine sync yet, Bun-compiled binary, pre-1.0. Feedback welcome — especially from Atuin users who want project context without giving up sync.
 ```

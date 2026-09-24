@@ -2,12 +2,14 @@
 import Terminal from './Terminal.astro';
 
 const installLines = [
-  '# One line installer',
-  'curl -fsSL https://recall.sh/install | bash',
+  '# Homebrew (macOS / Linux)',
+  'brew tap bharath-code/recall',
+  'brew trust bharath-code/recall',
+  'brew install recall',
   '',
   '# Or build from source (Bun 1.2+ required)',
-  'git clone https://github.com/bharath/recall-cli.git',
-  'cd recall-cli && bun install && bun run build',
+  'git clone https://github.com/Bharath-code/recall.git',
+  'cd recall && bun install && bun run build',
   '',
   '# Then initialize',
   'recall init',
@@ -24,7 +26,7 @@ const installLines = [
         Start remembering in 30 seconds
       </h2>
       <p class="text-dust text-lg text-pretty reveal max-w-2xl mx-auto">
-        One command to install. One command to initialize. Your existing shell history is imported automatically.
+        Install with Homebrew. One command to initialize. Your existing shell history is imported automatically.
       </p>
     </div>
 

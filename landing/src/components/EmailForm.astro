@@ -1,9 +1,12 @@
 ---
-const formspreeEndpoint = import.meta.env.FORMSPREE_ENDPOINT || 'https://formspree.io/f/YOUR_FORM_ID';
+const endpoint = import.meta.env.FORMSPREE_ENDPOINT;
+// ponytail: no real endpoint → show the GitHub link instead of a form that silently drops signups
+const formReady = /^https:\/\/formspree\.io\/f\/(?!your)/i.test(endpoint ?? '');
 ---
 
+{formReady ? (
 <form
-  action={formspreeEndpoint}
+  action={endpoint}
   method="POST"
   class="flex flex-col sm:flex-row gap-4 max-w-lg"
 >
@@ -23,3 +26,11 @@ const formspreeEndpoint = import.meta.env.FORMSPREE_ENDPOINT || 'https://formspr
     Get Early Access →
   </button>
 </form>
+) : (
+<a
+  href="https://github.com/Bharath-code/recall"
+  class="inline-block px-8 py-4 bg-gradient-to-r from-cyan to-mint text-ink font-mono font-semibold text-sm rounded-xl"
+>
+  Star on GitHub →
+</a>
+)}

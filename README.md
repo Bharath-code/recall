@@ -3,7 +3,7 @@
 > **Give your AI coding agent a memory of how you actually work.**  
 > *Local-first command history, exposed to Claude Code and Cursor over MCP.*
 
-[![CI](https://img.shields.io/github/actions/workflow/status/bharath/recall-cli/ci.yml?branch=main&label=CI&logo=github)](https://github.com/bharath/recall-cli/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Bharath-code/recall/release.yml?label=release&logo=github)](https://github.com/Bharath-code/recall/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.2%2B-gray?logo=bun)](https://bun.sh)
 ![Tests](https://img.shields.io/badge/tests-205%20passing-brightgreen)
@@ -104,6 +104,7 @@ recall delete --all --yes
 
 ```bash
 brew tap bharath-code/recall
+brew trust bharath-code/recall   # newer Homebrew blocks third-party taps until trusted
 brew install recall
 recall init        # Run the setup wizard
 ```
@@ -111,8 +112,8 @@ recall init        # Run the setup wizard
 ### From Source
 
 ```bash
-git clone https://github.com/bharath/recall-cli.git
-cd recall-cli
+git clone https://github.com/Bharath-code/recall.git
+cd recall
 bun install
 bun run dev        # Run via Bun
 bun run build      # Compile to bin/recall
